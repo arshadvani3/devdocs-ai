@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar styles */
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-gray-800;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-gray-600 rounded;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+}
+
+/* Prism.js code highlighting overrides for dark theme */
+code[class*="language-"],
+pre[class*="language-"] {
+  @apply text-sm;
+  text-shadow: none;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  line-height: 1.5;
+  tab-size: 4;
+  hyphens: none;
+}
+
+pre[class*="language-"] {
+  @apply p-4 overflow-auto rounded-lg bg-gray-900;
+  margin: 0;
+}
+
+/* Animation for streaming cursor */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.streaming-cursor {
+  animation: blink 1s infinite;
+}

@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# ChromaDB
+chroma_db/
+*.db
+*.sqlite3
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumb.db
+
+# Logs
+*.log
+logs/
+
+# Node
+node_modules/
+dist/
+build/
+.cache/
+
+# Misc
+*.tmp
+*.bak
+.cache
