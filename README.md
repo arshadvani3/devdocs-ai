@@ -570,17 +570,6 @@ DevDocs AI is a portfolio project demonstrating production-grade AI/ML engineeri
 
 ---
 
-## Acknowledgments
-
-Built with assistance from Claude Code, leveraging:
-- [Ollama](https://ollama.ai) - Local LLM inference engine
-- [ChromaDB](https://www.trychroma.com/) - Embedding database
-- [SentenceTransformers](https://www.sbert.net/) - State-of-the-art embedding models
-- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
-- [React](https://react.dev/) - Frontend library
-
----
-
 <div align="center">
 
 **DevDocs AI** • Production-Ready RAG System
