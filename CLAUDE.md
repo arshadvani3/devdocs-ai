@@ -993,8 +993,6 @@ esprima==4.0.1            # JavaScript AST parsing
 
 ## Contact & Contribution
 
-This project was built with Claude Code as an AI-assisted development project.
-
 For questions or contributions, refer to the repository README.md.
 
 ---
