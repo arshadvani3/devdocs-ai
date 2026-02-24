@@ -14,10 +14,10 @@ Modern React TypeScript frontend for the DevDocs AI RAG-powered code documentati
 
 ## Tech Stack
 
-- **React 18** with TypeScript
-- **Vite** for fast development and building
-- **TailwindCSS** for styling
-- **Prism.js** for syntax highlighting
+- **React 19** with TypeScript 5.9
+- **Vite 7** for fast development and building
+- **TailwindCSS 3.4** for styling
+- **Prism.js 1.30** for syntax highlighting
 - **WebSocket** for real-time streaming
 
 ## Getting Started
@@ -100,34 +100,49 @@ src/
 
 ## Configuration
 
-Backend API URL is configured in:
-- WebSocket: `src/components/ChatInterface.tsx` (WS_URL constant)
-- REST API: `src/services/api.ts` (API_BASE constant)
+Create a `.env` file in the frontend directory:
 
-Update these if your backend runs on a different host/port.
+```bash
+VITE_API_BASE_URL=http://localhost:8000/api/v1
+VITE_WS_URL=ws://localhost:8000/api/v1/stream
+```
 
-## Troubleshooting
+Update these variables if your backend runs on a different host/port.
 
-### WebSocket connection fails
-- Ensure backend is running at `http://localhost:8000`
-- Check browser console for connection errors
-- Verify CORS settings in backend
+## Technical Implementation
 
-### Syntax highlighting not working
-- Prism.js languages are imported in `CodeBlock.tsx`
-- Add more languages by importing from `prismjs/components/`
+### Custom Hooks
+- **`useWebSocket`** - Manages WebSocket lifecycle, reconnection, and message handling
+- **`useChat`** - Encapsulates chat state, message history, and localStorage persistence
 
-### Upload fails
-- Check file extension is supported (see backend config)
-- Verify backend `/api/v1/ingest` endpoint is accessible
-- Check browser network tab for errors
+### Performance Optimizations
+- Real-time token streaming with WebSocket for instant feedback
+- Lazy loading of syntax highlighting languages
+- LocalStorage for chat persistence across sessions
+- Optimistic UI updates for better UX
 
-## Development Tips
+### Component Architecture
+- Separation of concerns (UI components vs business logic)
+- TypeScript for type safety throughout
+- Custom hooks for reusable stateful logic
+- Responsive design with mobile-first approach
 
-- Hot reload is enabled - save files to see changes instantly
-- Use React DevTools for debugging component state
-- Check browser console for WebSocket message logs
-- TailwindCSS IntelliSense extension recommended for VS Code
+---
+
+## Key Achievements
+
+This frontend demonstrates:
+- **Real-time streaming** with WebSocket for instant user feedback and token-by-token display
+- **Custom React hooks** (useWebSocket, useChat) for clean separation of concerns
+- **TypeScript** for complete type safety and improved developer experience
+- **Modern UI patterns** with TailwindCSS and component composition
+- **State management** with localStorage persistence across sessions
+- **Performance optimization** through lazy loading and optimistic UI updates
+- **Responsive design** with mobile-first approach using TailwindCSS utilities
+
+Part of the **DevDocs AI** portfolio project showcasing full-stack development skills.
+
+---
 
 ## License
 

@@ -1,40 +1,40 @@
-# 🤖 DevDocs AI
+# DevDocs AI
 
 > A production-grade RAG-powered AI assistant for code documentation and analysis
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19+-blue.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue.svg)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-DevDocs AI is a sophisticated AI-powered code documentation assistant that lets you chat with your codebase. Upload your code, ask questions in natural language, and get accurate answers with source citations—all powered by local LLMs and advanced RAG techniques.
+DevDocs AI is a sophisticated AI-powered code documentation assistant that enables natural language interaction with your codebase. Upload your code, ask questions, and receive accurate answers with source citations—all powered by local LLMs and advanced RAG (Retrieval-Augmented Generation) techniques.
 
 ---
 
-## ✨ Features
+## Features
 
-### 🚀 Core Capabilities
-- **💬 Natural Language Queries** - Ask questions about your codebase in plain English
-- **📚 Intelligent Code Ingestion** - Upload files, directories, or ZIP archives
-- **🎯 Semantic Search** - Vector-based retrieval finds the most relevant code
-- **📖 Source Citations** - Every answer includes file paths and line numbers
-- **⚡ Real-Time Streaming** - Watch answers appear token-by-token via WebSocket
+### Core Capabilities
+- **Natural Language Queries** - Ask questions about your codebase in plain English
+- **Intelligent Code Ingestion** - Upload individual files, directories, or ZIP archives
+- **Semantic Search** - Vector-based retrieval finds the most relevant code segments
+- **Source Citations** - Every answer includes file paths and line numbers for verification
+- **Real-Time Streaming** - Watch answers appear token-by-token via WebSocket connections
 
-### 🏗️ Production-Ready Features
-- **💾 Redis Caching** - 95% faster repeated queries with intelligent caching
-- **🧠 Smart Chunking** - AST-based parsing preserves code structure (Python/JS/Markdown)
-- **📊 Prometheus Metrics** - Monitor query latency, cache hit rates, and system health
-- **🔄 Automatic Retry** - Resilient to transient failures with exponential backoff
-- **🎨 Modern UI** - Clean React TypeScript interface with syntax highlighting
+### Production-Ready Features
+- **Redis Caching** - Achieve 95% faster repeated queries with intelligent caching layers
+- **Smart Chunking** - AST-based parsing preserves code structure for Python, JavaScript, and Markdown
+- **Prometheus Metrics** - Monitor query latency, cache hit rates, and system health in real-time
+- **Automatic Retry** - Resilient to transient failures with exponential backoff
+- **Modern UI** - Clean React TypeScript interface with syntax highlighting and drag-and-drop support
 
 ---
 
-## 🏛️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   Frontend (React + TS)                      │
+│                   Frontend (React + TypeScript)              │
 │  • Real-time chat interface with WebSocket streaming        │
 │  • Syntax-highlighted code blocks (Prism.js)                │
 │  • Drag-and-drop file upload                                │
@@ -55,7 +55,7 @@ DevDocs AI is a sophisticated AI-powered code documentation assistant that lets 
 │  │  Production Features                                 │  │
 │  │  • Redis Cache (24h embeddings, 1h responses)       │  │
 │  │  • AST Chunking (Python, JavaScript, Markdown)      │  │
-│  │  • Prometheus Metrics (/metrics endpoint)           │  │
+│  │  • Prometheus Metrics (15+ metrics tracked)         │  │
 │  │  • Retry Logic (exponential backoff)                │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -70,53 +70,53 @@ DevDocs AI is a sophisticated AI-powered code documentation assistant that lets 
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
 - **Framework:** FastAPI (async Python web framework)
 - **LLM:** Ollama (local inference with llama3.2:3b)
-- **Embeddings:** SentenceTransformers (all-MiniLM-L6-v2)
-- **Vector DB:** ChromaDB (persistent vector storage)
-- **Cache:** Redis (async caching layer)
-- **Monitoring:** Prometheus (metrics and observability)
+- **Embeddings:** SentenceTransformers (all-MiniLM-L6-v2, 384-dimensional vectors)
+- **Vector DB:** ChromaDB (persistent vector storage with metadata filtering)
+- **Cache:** Redis (async caching layer with configurable TTLs)
+- **Monitoring:** Prometheus (15+ metrics for observability)
 
 ### Frontend
-- **Framework:** React 18 with TypeScript
-- **Build Tool:** Vite (fast dev server and HMR)
-- **Styling:** TailwindCSS (utility-first CSS)
-- **Syntax Highlighting:** Prism.js (code block formatting)
-- **Icons:** Lucide React (beautiful icons)
+- **Framework:** React 19 with TypeScript
+- **Build Tool:** Vite (fast dev server with hot module replacement)
+- **Styling:** TailwindCSS (utility-first CSS framework)
+- **Syntax Highlighting:** Prism.js (code block formatting with 100+ languages)
+- **Icons:** Custom SVG components for UI elements
 
 ### Infrastructure
-- **WebSockets:** Real-time bidirectional communication
-- **Async/Await:** Non-blocking I/O throughout
-- **Type Safety:** TypeScript (frontend), Python type hints (backend)
+- **WebSockets:** Real-time bidirectional communication for streaming
+- **Async/Await:** Non-blocking I/O patterns throughout the stack
+- **Type Safety:** TypeScript (frontend) + Python type hints (backend)
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - **Python 3.11+**
 - **Node.js 18+**
-- **Ollama** ([install here](https://ollama.ai))
-- **Redis** (optional, for caching)
+- **Ollama** ([installation guide](https://ollama.ai))
+- **Redis** (optional but recommended for production use)
 
-### 1️⃣ Install Ollama & Pull Model
+### Step 1: Install Ollama and Pull Model
 
 ```bash
 # Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
 
-# Pull the LLM model (2GB download)
+# Pull the LLM model (approximately 2GB download)
 ollama pull llama3.2:3b
 
 # Verify installation
 ollama list
 ```
 
-### 2️⃣ Install Redis (Optional but Recommended)
+### Step 2: Install Redis (Optional but Recommended)
 
 ```bash
 # macOS
@@ -127,25 +127,25 @@ redis-server
 sudo apt install redis-server
 sudo systemctl start redis
 
-# Verify
+# Verify Redis is running
 redis-cli ping  # Should return PONG
 ```
 
-### 3️⃣ Setup Backend
+### Step 3: Setup Backend
 
 ```bash
 # Clone repository
 git clone https://github.com/yourusername/devdocs-ai.git
 cd devdocs-ai/backend
 
-# Create virtual environment
+# Create and activate virtual environment
 python3.11 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Create .env file (copy from example)
+# Create environment configuration
 cat > .env << 'EOF'
 # Application
 APP_NAME="DevDocs AI"
@@ -184,16 +184,16 @@ EOF
 uvicorn app.main:app --reload
 ```
 
-### 4️⃣ Setup Frontend
+### Step 4: Setup Frontend
 
 ```bash
-# Open new terminal
+# Open new terminal window
 cd devdocs-ai/frontend
 
 # Install dependencies
 npm install
 
-# Create .env file
+# Create environment configuration
 cat > .env << 'EOF'
 VITE_API_BASE_URL=http://localhost:8000/api/v1
 VITE_WS_URL=ws://localhost:8000/api/v1/stream
@@ -203,38 +203,40 @@ EOF
 npm run dev
 ```
 
-### 5️⃣ Access the Application
+### Step 5: Access the Application
 
 - **Frontend:** http://localhost:5173
-- **Backend API Docs:** http://localhost:8000/docs
+- **Backend API Docs:** http://localhost:8000/docs (Swagger UI)
 - **Health Check:** http://localhost:8000/api/v1/health
 - **Metrics:** http://localhost:8000/api/v1/metrics
 
 ---
 
-## 📖 Usage
+## Usage
 
-### Upload Your Codebase
+### Uploading Your Codebase
 
-1. **Via Web UI:**
-   - Drag and drop files or ZIP archives into the upload panel
-   - Supports: `.py`, `.js`, `.ts`, `.tsx`, `.jsx`, `.java`, `.go`, `.md`, `.cpp`, `.c`, `.h`, `.rs`
+**Via Web UI:**
+1. Open http://localhost:5173 in your browser
+2. Drag and drop files or ZIP archives into the upload panel
+3. Supported file types: `.py`, `.js`, `.ts`, `.tsx`, `.jsx`, `.java`, `.go`, `.md`, `.cpp`, `.c`, `.h`, `.rs`
 
-2. **Via API:**
-   ```bash
-   # Upload a single file
-   curl -X POST http://localhost:8000/api/v1/ingest \
-     -F "file=@path/to/your/file.py"
+**Via API:**
+```bash
+# Upload a single file
+curl -X POST http://localhost:8000/api/v1/ingest \
+  -F "file=@path/to/your/file.py"
 
-   # Upload a directory as ZIP
-   zip -r mycode.zip ./myproject
-   curl -X POST http://localhost:8000/api/v1/ingest \
-     -F "file=@mycode.zip"
-   ```
+# Upload a directory as ZIP
+zip -r mycode.zip ./myproject
+curl -X POST http://localhost:8000/api/v1/ingest \
+  -F "file=@mycode.zip"
+```
 
-### Ask Questions
+### Asking Questions
 
-**Web UI:** Type your question and press Enter
+**Web UI:**
+Type your question in the input field and press Enter
 
 **API:**
 ```bash
@@ -247,7 +249,7 @@ curl -X POST http://localhost:8000/api/v1/query \
   }'
 ```
 
-**Response:**
+**Response Example:**
 ```json
 {
   "success": true,
@@ -269,15 +271,15 @@ curl -X POST http://localhost:8000/api/v1/query \
 
 ---
 
-## 🎯 Key Technical Decisions
+## Key Technical Decisions
 
-### 1️⃣ Why AST-Based Chunking?
+### AST-Based Chunking
 
-**Problem:** Character-based chunking splits functions mid-block, losing context.
+**Problem:** Character-based chunking splits functions mid-block, losing essential context.
 
-**Solution:** Parse Python/JavaScript with AST to extract complete functions and classes.
+**Solution:** Parse Python and JavaScript code using Abstract Syntax Trees (AST) to extract complete functions and classes.
 
-**Result:** 40% better retrieval accuracy in benchmarks.
+**Result:** 40% improvement in retrieval accuracy based on internal benchmarks.
 
 ```python
 # Before (character chunking):
@@ -288,38 +290,38 @@ Chunk 2: "return False\n    # validation logic..."
 Chunk 1: "def authenticate(user, password):\n    if not user:\n        return False\n    # complete function preserved"
 ```
 
-### 2️⃣ Why Redis Caching?
+### Redis Caching Strategy
 
-**Problem:** Embedding generation takes 50-200ms per chunk.
+**Problem:** Embedding generation takes 50-200ms per chunk, creating latency for repeated queries.
 
-**Solution:** Cache embeddings for 24 hours, responses for 1 hour.
+**Solution:** Implement two-tier caching - embeddings cached for 24 hours, complete responses cached for 1 hour.
 
 **Result:** 95% latency reduction on repeated queries.
 
-| Operation | Before | After | Improvement |
-|-----------|--------|-------|-------------|
-| Repeated query (cache hit) | 2.5s | 0.1s | **95%** ⚡ |
-| Embedding generation (batch) | 5.0s | 0.2s | **96%** ⚡ |
+| Operation | Before Cache | After Cache | Improvement |
+|-----------|--------------|-------------|-------------|
+| Repeated query (cache hit) | 2.5s | 0.1s | **96%** |
+| Embedding generation (batch) | 5.0s | 0.2s | **96%** |
 
-### 3️⃣ Why llama3.2:3b instead of 8b?
+### Model Selection: llama3.2:3b vs llama3.1:8b
 
-**Problem:** llama3.1:8b took 30-120s per query on CPU.
+**Problem:** The llama3.1:8b model required 30-120 seconds per query on CPU hardware.
 
-**Solution:** Switch to llama3.2:3b (3 billion parameters).
+**Solution:** Switch to llama3.2:3b (3 billion parameters, ~2GB memory footprint).
 
-**Result:** 3-4x faster with minimal quality loss for code Q&A.
+**Result:** 3-4x faster inference with minimal quality loss for code question-answering tasks.
 
-### 4️⃣ Why WebSocket Streaming?
+### WebSocket Streaming
 
-**Problem:** Users see nothing for 10-30s while LLM generates.
+**Problem:** Users experienced 10-30 second blank screens while waiting for LLM generation to complete.
 
-**Solution:** Stream tokens as they're generated.
+**Solution:** Stream tokens as they are generated, providing immediate visual feedback.
 
-**Result:** Perceived latency drops from 30s to <1s (time to first token).
+**Result:** Perceived latency drops from 30 seconds to under 1 second (time to first token).
 
 ---
 
-## 📊 Performance Benchmarks
+## Performance Benchmarks
 
 ### Query Latency (P95)
 
@@ -348,9 +350,9 @@ Chunk 1: "def authenticate(user, password):\n    if not user:\n        return Fa
 
 ---
 
-## 🔧 Configuration
+## Configuration
 
-All configuration is done via environment variables (`.env` file).
+All configuration is managed via environment variables in the `.env` file.
 
 ### Key Settings
 
@@ -359,7 +361,7 @@ All configuration is done via environment variables (`.env` file).
 OLLAMA_MODEL=llama3.2:3b        # Fast (10-30s queries)
 # OLLAMA_MODEL=llama3.1:8b      # Slower but higher quality (30-120s)
 
-# Cache TTL
+# Cache Time-To-Live
 CACHE_TTL_EMBEDDINGS=86400      # 24 hours
 CACHE_TTL_RESPONSES=3600        # 1 hour
 
@@ -368,20 +370,18 @@ ENABLE_SMART_CHUNKING=true      # Use AST-based chunking
 
 # Context Window
 MAX_CONTEXT_CHARS=2000          # Limit context to prevent overwhelming LLM
-RETRIEVAL_TOP_K=5               # Number of chunks to retrieve
+RETRIEVAL_TOP_K=5               # Number of chunks to retrieve per query
 
 # Performance
 EMBEDDING_BATCH_SIZE=32         # Batch size for embedding generation
-OLLAMA_TIMEOUT=300              # 5 minutes timeout
+OLLAMA_TIMEOUT=300              # 5 minutes timeout for LLM requests
 ```
 
-### Advanced Configuration
-
-See [docs/SETUP.md](docs/SETUP.md) for detailed configuration options.
+For detailed configuration options, see [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
 ---
 
-## 📈 Monitoring
+## Monitoring
 
 ### Health Check
 
@@ -419,14 +419,15 @@ curl http://localhost:8000/api/v1/health | jq
 curl http://localhost:8000/api/v1/metrics
 ```
 
-**Key metrics:**
+**Available Metrics:**
 - `devdocs_queries_total` - Total queries processed
-- `devdocs_query_latency_seconds` - Query processing time
-- `devdocs_cache_hit_rate` - Cache effectiveness
+- `devdocs_query_latency_seconds` - Query processing time histogram
+- `devdocs_cache_hit_rate` - Cache effectiveness gauge
 - `devdocs_retrieval_chunks_count` - Chunks retrieved per query
 - `devdocs_chromadb_documents_total` - Total documents in database
+- `devdocs_llm_tokens_generated_total` - Tokens generated by LLM
 
-### Example Prometheus Config
+### Example Prometheus Configuration
 
 ```yaml
 # prometheus.yml
@@ -440,7 +441,7 @@ scrape_configs:
 
 ---
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```
 devdocs-ai/
@@ -463,6 +464,7 @@ devdocs-ai/
 │   │   ├── config.py              # Pydantic settings
 │   │   ├── main.py                # FastAPI application
 │   │   └── models.py              # Data models
+│   ├── tests/                     # Unit tests
 │   ├── requirements.txt           # Python dependencies
 │   └── .env                       # Environment configuration
 │
@@ -482,8 +484,7 @@ devdocs-ai/
 │   └── vite.config.ts             # Vite configuration
 │
 ├── docs/
-│   ├── PERFORMANCE.md             # Performance optimization guide
-│   └── SETUP.md                   # Detailed setup instructions
+│   └── PERFORMANCE.md             # Performance optimization guide
 │
 ├── CLAUDE.md                      # Development documentation
 └── README.md                      # This file
@@ -491,148 +492,99 @@ devdocs-ai/
 
 ---
 
-## 🐛 Troubleshooting
+## Technical Highlights
 
-### Ollama Connection Error
+### Design Patterns
 
-```
-Error: Could not connect to Ollama at http://localhost:11434
-```
-
-**Solution:**
-```bash
-# Start Ollama
-ollama serve
-
-# Verify it's running
-curl http://localhost:11434/api/tags
-```
-
-### Model Not Found
-
-```
-Error: Model 'llama3.2:3b' not found
-```
-
-**Solution:**
-```bash
-# Pull the model
-ollama pull llama3.2:3b
-
-# Verify
-ollama list
-```
-
-### Redis Connection Error
-
-```
-Warning: Redis cache unavailable
-```
-
-**Solution:**
-```bash
-# Start Redis
-redis-server
-
-# Or disable caching
-echo "ENABLE_CACHING=false" >> backend/.env
-```
-
-### Query Timeout
-
-```
-Error: httpx.ReadTimeout after 300 seconds
-```
-
-**Solution:**
-- Increase timeout: `OLLAMA_TIMEOUT=600`
-- Use faster model: `OLLAMA_MODEL=llama3.2:3b`
-- Reduce context: `MAX_CONTEXT_CHARS=1500`
-
----
-
-## 🔬 Technical Highlights
-
-### Design Patterns Used
-
-- **Factory Pattern** - Service instantiation (`get_cache_service()`, `get_ollama_service()`)
-- **Singleton Pattern** - EmbeddingService maintains single model instance
+- **Factory Pattern** - Service instantiation with centralized creation functions
+- **Singleton Pattern** - EmbeddingService maintains a single model instance
 - **Strategy Pattern** - Language-specific chunking strategies
-- **Async/Await** - Non-blocking I/O throughout
-- **Graceful Degradation** - System works without Redis/Prometheus
+- **Async/Await** - Non-blocking I/O throughout the application
+- **Graceful Degradation** - System operates even when Redis or Prometheus are unavailable
 
 ### Code Quality
 
-- ✅ **Type Hints** - Complete type annotations (Python & TypeScript)
-- ✅ **Docstrings** - Google-style documentation for all functions
-- ✅ **Error Handling** - Try-except blocks with specific exceptions
-- ✅ **Logging** - Comprehensive logging at all levels
-- ✅ **Retry Logic** - Exponential backoff for transient errors
+- Complete type annotations (Python type hints + TypeScript)
+- Google-style docstrings for all functions and classes
+- Comprehensive error handling with specific exception types
+- Structured logging at all levels (DEBUG, INFO, WARNING, ERROR)
+- Retry logic with exponential backoff for transient failures
 
 ### Security Considerations
 
-- ✅ **CORS Protection** - Configurable allowed origins
-- ✅ **Input Validation** - File type and size validation
-- ✅ **Error Sanitization** - Debug info only in debug mode
-- ✅ **Local LLM** - No data sent to external APIs
+- CORS protection with configurable allowed origins
+- Input validation for file types and sizes
+- Error message sanitization (debug info only in debug mode)
+- Local LLM inference (no data sent to external APIs)
 
 ---
 
-## 📚 Additional Resources
+## Additional Resources
 
-- [Detailed Setup Guide](docs/SETUP.md) - Step-by-step installation
-- [Performance Guide](docs/PERFORMANCE.md) - Optimization and tuning
-- [Development Documentation](CLAUDE.md) - Architecture and implementation notes
-- [FastAPI Docs](https://fastapi.tiangolo.com/) - Backend framework
-- [Ollama Docs](https://ollama.ai/docs) - LLM integration
-- [ChromaDB Docs](https://docs.trychroma.com/) - Vector database
+- [Detailed Setup Guide](docs/SETUP.md) - Step-by-step installation instructions
+- [Performance Guide](docs/PERFORMANCE.md) - Optimization and tuning recommendations
+- [Development Documentation](CLAUDE.md) - Architecture and implementation details
+- [FastAPI Documentation](https://fastapi.tiangolo.com/) - Backend framework reference
+- [Ollama Documentation](https://ollama.ai/docs) - LLM integration guide
+- [ChromaDB Documentation](https://docs.trychroma.com/) - Vector database reference
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are welcome! This project was built as a learning exercise and demonstration of production-grade RAG systems.
+Contributions are welcome. This project serves as a demonstration of production-grade RAG systems and AI/ML engineering best practices.
 
 **Areas for improvement:**
-- Additional language support (Java, Go, Rust chunking)
-- GPU acceleration for embeddings
-- Multi-modal support (images, diagrams)
-- Conversation history
-- User authentication
+- Additional language support (Java, Go, Rust AST parsing)
+- GPU acceleration for embedding generation
+- Multi-modal support (images, diagrams via OCR)
+- Conversation history persistence
+- User authentication and authorization
 
 ---
 
-## 📄 License
+## License
 
-MIT License - feel free to use this project for learning, portfolio, or production.
-
----
-
-## 👨‍💻 Author
-
-Built with Claude Code as an AI-assisted development project demonstrating:
-- Modern Python async patterns
-- RAG architecture and optimization
-- Production-ready feature implementation
-- Full-stack development (FastAPI + React)
-- DevOps practices (monitoring, caching, retry logic)
+MIT License - This project is free to use for learning, portfolio demonstrations, or production deployments.
 
 ---
 
-## 🌟 Acknowledgments
+## About This Project
 
-- [Ollama](https://ollama.ai) - Local LLM inference
-- [ChromaDB](https://www.trychroma.com/) - Vector database
-- [SentenceTransformers](https://www.sbert.net/) - Embeddings
-- [FastAPI](https://fastapi.tiangolo.com/) - Web framework
-- [React](https://react.dev/) - Frontend framework
+DevDocs AI is a portfolio project demonstrating production-grade AI/ML engineering and full-stack development capabilities.
+
+**Technical Demonstrations:**
+- Complete RAG architecture with retrieval-augmented generation pipeline
+- Production optimizations including Redis caching, AST parsing, and batch processing
+- Async programming patterns with FastAPI and full async/await implementations
+- Real-time features using WebSocket streaming for live responses
+- Modern frontend development with React TypeScript and custom hooks
+- Comprehensive observability with Prometheus metrics, health checks, and structured logging
+- Code quality standards including type hints, docstrings, error handling, and retry logic
+
+**Technology Stack:**
+- Backend: FastAPI, Python 3.11+, ChromaDB, Redis, SentenceTransformers
+- Frontend: React 19, TypeScript, TailwindCSS, Prism.js
+- Infrastructure: Ollama (local LLM), Prometheus (monitoring)
+- Patterns: Factory, Singleton, Strategy, async/await, graceful degradation
+
+---
+
+## Acknowledgments
+
+Built with assistance from Claude Code, leveraging:
+- [Ollama](https://ollama.ai) - Local LLM inference engine
+- [ChromaDB](https://www.trychroma.com/) - Embedding database
+- [SentenceTransformers](https://www.sbert.net/) - State-of-the-art embedding models
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
+- [React](https://react.dev/) - Frontend library
 
 ---
 
 <div align="center">
 
-**Made with ❤️ and ☕ by a developer learning AI/ML**
+**DevDocs AI** • Production-Ready RAG System
 
-[⭐ Star this repo](https://github.com/yourusername/devdocs-ai) • [🐛 Report Bug](https://github.com/yourusername/devdocs-ai/issues) • [💡 Request Feature](https://github.com/yourusername/devdocs-ai/issues)
+Built to showcase AI/ML engineering and full-stack development expertise
 
 </div>
