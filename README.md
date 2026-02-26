@@ -532,7 +532,7 @@ devdocs-ai/
 
 ## Contributing
 
-Contributions are welcome. This project serves as a demonstration of production-grade RAG systems and AI/ML engineering best practices.
+Contributions are welcome to help improve DevDocs AI.
 
 **Areas for improvement:**
 - Additional language support (Java, Go, Rust AST parsing)
@@ -551,9 +551,9 @@ MIT License - This project is free to use for learning, portfolio demonstrations
 
 ## About This Project
 
-DevDocs AI is a portfolio project demonstrating production-grade AI/ML engineering and full-stack development capabilities.
+DevDocs AI is a production-ready code documentation assistant powered by advanced RAG techniques and local LLM inference.
 
-**Technical Demonstrations:**
+**Key Technical Features:**
 - Complete RAG architecture with retrieval-augmented generation pipeline
 - Production optimizations including Redis caching, AST parsing, and batch processing
 - Async programming patterns with FastAPI and full async/await implementations
@@ -574,6 +574,6 @@ DevDocs AI is a portfolio project demonstrating production-grade AI/ML engineeri
 
 **DevDocs AI** • Production-Ready RAG System
 
-Built to showcase AI/ML engineering and full-stack development expertise
+Intelligent code documentation powered by local LLMs
 
 </div>

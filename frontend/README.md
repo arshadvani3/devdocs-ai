@@ -129,9 +129,9 @@ Update these variables if your backend runs on a different host/port.
 
 ---
 
-## Key Achievements
+## Key Features
 
-This frontend demonstrates:
+The frontend implements:
 - **Real-time streaming** with WebSocket for instant user feedback and token-by-token display
 - **Custom React hooks** (useWebSocket, useChat) for clean separation of concerns
 - **TypeScript** for complete type safety and improved developer experience
@@ -139,8 +139,6 @@ This frontend demonstrates:
 - **State management** with localStorage persistence across sessions
 - **Performance optimization** through lazy loading and optimistic UI updates
 - **Responsive design** with mobile-first approach using TailwindCSS utilities
-
-Part of the **DevDocs AI** portfolio project showcasing full-stack development skills.
 
 ---
 

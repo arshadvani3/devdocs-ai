@@ -329,9 +329,9 @@ This backend includes production-grade features implemented across multiple phas
 
 ---
 
-## Key Achievements
+## Key Features
 
-This backend demonstrates:
+The backend implements:
 - **Production-grade RAG pipeline** with complete document ingestion and retrieval
 - **Advanced caching strategy** with Redis for 95% latency reduction
 - **AST-based code parsing** for better semantic understanding
@@ -339,8 +339,6 @@ This backend demonstrates:
 - **Observability** through Prometheus metrics (15+ metrics) and comprehensive health checks
 - **Resilience** with retry logic (3 attempts, exponential backoff) and graceful degradation
 - **Code quality** with complete type hints, docstrings, and structured error handling
-
-Part of the **DevDocs AI** portfolio project showcasing AI/ML engineering and full-stack capabilities.
 
 ---
 
