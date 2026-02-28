@@ -486,7 +486,6 @@ devdocs-ai/
 ├── docs/
 │   └── PERFORMANCE.md             # Performance optimization guide
 │
-├── CLAUDE.md                      # Development documentation
 └── README.md                      # This file
 ```
 
@@ -523,7 +522,6 @@ devdocs-ai/
 
 - [Detailed Setup Guide](docs/SETUP.md) - Step-by-step installation instructions
 - [Performance Guide](docs/PERFORMANCE.md) - Optimization and tuning recommendations
-- [Development Documentation](CLAUDE.md) - Architecture and implementation details
 - [FastAPI Documentation](https://fastapi.tiangolo.com/) - Backend framework reference
 - [Ollama Documentation](https://ollama.ai/docs) - LLM integration guide
 - [ChromaDB Documentation](https://docs.trychroma.com/) - Vector database reference
