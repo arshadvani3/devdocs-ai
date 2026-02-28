@@ -302,6 +302,10 @@ def chunk_markdown_by_headers(
             logger.debug(f"Large markdown section ({len(section_text)} chars), splitting...")
             from app.utils.chunking import chunk_text
             sub_chunks = chunk_text(section_text, file_path, "markdown", max_chunk_size)
+            # Fix duplicate IDs by adding section line number to each chunk ID
+            for i, chunk in enumerate(sub_chunks):
+                chunk.id = f"{file_path}:{start_line}:subsection_{i}"
+                chunk.chunk_index = len(chunks) + i
             chunks.extend(sub_chunks)
         else:
             chunks.append(DocumentChunk(
