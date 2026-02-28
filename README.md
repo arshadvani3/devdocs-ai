@@ -88,6 +88,7 @@ DevDocs AI is a sophisticated AI-powered code documentation assistant that enabl
 - **Icons:** Custom SVG components for UI elements
 
 ### Infrastructure
+- **Containerization:** Docker with multi-stage builds and Docker Compose orchestration
 - **WebSockets:** Real-time bidirectional communication for streaming
 - **Async/Await:** Non-blocking I/O patterns throughout the stack
 - **Type Safety:** TypeScript (frontend) + Python type hints (backend)
@@ -96,14 +97,44 @@ DevDocs AI is a sophisticated AI-powered code documentation assistant that enabl
 
 ## Quick Start
 
-### Prerequisites
+### Option 1: Docker (Recommended)
+
+The fastest way to get started is using Docker Compose, which handles all dependencies automatically.
+
+```bash
+# Clone repository
+git clone https://github.com/yourusername/devdocs-ai.git
+cd devdocs-ai
+
+# Start all services (backend, frontend, Redis, Ollama)
+docker-compose up -d
+
+# Pull Ollama model (first time only, ~2GB download)
+docker exec -it devdocs-ollama ollama pull llama3.2:3b
+
+# View logs
+docker-compose logs -f
+
+# Access the application
+# Frontend: http://localhost
+# Backend API: http://localhost:8000/docs
+# Health Check: http://localhost:8000/api/v1/health
+```
+
+Stop services with `docker-compose down`. See [DOCKER.md](DOCKER.md) for complete documentation.
+
+### Option 2: Local Development
+
+For development without Docker, follow these steps:
+
+#### Prerequisites
 
 - **Python 3.11+**
 - **Node.js 18+**
 - **Ollama** ([installation guide](https://ollama.ai))
-- **Redis** (optional but recommended for production use)
+- **Redis** (optional but recommended)
 
-### Step 1: Install Ollama and Pull Model
+#### Step 1: Install Ollama and Pull Model
 
 ```bash
 # Install Ollama
@@ -116,7 +147,7 @@ ollama pull llama3.2:3b
 ollama list
 ```
 
-### Step 2: Install Redis (Optional but Recommended)
+#### Step 2: Install Redis (Optional)
 
 ```bash
 # macOS
@@ -126,87 +157,49 @@ redis-server
 # Ubuntu/Debian
 sudo apt install redis-server
 sudo systemctl start redis
-
-# Verify Redis is running
-redis-cli ping  # Should return PONG
 ```
 
-### Step 3: Setup Backend
+#### Step 3: Setup Backend
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/devdocs-ai.git
-cd devdocs-ai/backend
+cd backend
 
-# Create and activate virtual environment
+# Create virtual environment
 python3.11 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Create environment configuration
-cat > .env << 'EOF'
-# Application
-APP_NAME="DevDocs AI"
-DEBUG=false
-LOG_LEVEL=INFO
+# Create .env file (use default values or customize)
+cp .env.example .env
 
-# Ollama LLM
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.2:3b
-OLLAMA_TIMEOUT=300
-
-# Embeddings
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-EMBEDDING_DEVICE=cpu
-
-# ChromaDB
-CHROMA_PERSIST_DIRECTORY=./chroma_db
-
-# Redis Cache
-REDIS_URL=redis://localhost:6379/0
-ENABLE_CACHING=true
-CACHE_TTL_EMBEDDINGS=86400
-CACHE_TTL_RESPONSES=3600
-
-# Performance
-MAX_CONTEXT_CHARS=2000
-ENABLE_SMART_CHUNKING=true
-
-# API
-API_HOST=0.0.0.0
-API_PORT=8000
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
-EOF
-
-# Start backend server
+# Start backend
 uvicorn app.main:app --reload
 ```
 
-### Step 4: Setup Frontend
+#### Step 4: Setup Frontend
 
 ```bash
-# Open new terminal window
-cd devdocs-ai/frontend
+cd frontend
 
 # Install dependencies
 npm install
 
-# Create environment configuration
+# Create .env file
 cat > .env << 'EOF'
 VITE_API_BASE_URL=http://localhost:8000/api/v1
 VITE_WS_URL=ws://localhost:8000/api/v1/stream
 EOF
 
-# Start development server
+# Start frontend
 npm run dev
 ```
 
-### Step 5: Access the Application
+#### Access the Application
 
 - **Frontend:** http://localhost:5173
-- **Backend API Docs:** http://localhost:8000/docs (Swagger UI)
+- **Backend API:** http://localhost:8000/docs
 - **Health Check:** http://localhost:8000/api/v1/health
 - **Metrics:** http://localhost:8000/api/v1/metrics
 
@@ -520,7 +513,7 @@ devdocs-ai/
 
 ## Additional Resources
 
-- [Detailed Setup Guide](docs/SETUP.md) - Step-by-step installation instructions
+- [Docker Deployment Guide](DOCKER.md) - Complete Docker and container orchestration documentation
 - [Performance Guide](docs/PERFORMANCE.md) - Optimization and tuning recommendations
 - [FastAPI Documentation](https://fastapi.tiangolo.com/) - Backend framework reference
 - [Ollama Documentation](https://ollama.ai/docs) - LLM integration guide

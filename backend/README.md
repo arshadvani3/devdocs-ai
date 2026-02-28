@@ -59,7 +59,32 @@ User Query → Embedding → Similarity Search → Context → LLM → Answer
 
 ## Setup
 
-### 1. Create Virtual Environment
+### Option 1: Docker (Recommended)
+
+```bash
+# Start all services (backend, frontend, Redis, Ollama)
+docker-compose up -d
+
+# Pull Ollama model (first time only)
+docker exec -it devdocs-ollama ollama pull llama3.2:3b
+
+# Access the application
+# Frontend: http://localhost
+# Backend API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
+
+# View logs
+docker-compose logs -f backend
+
+# Stop services
+docker-compose down
+```
+
+See [DOCKER.md](../DOCKER.md) for complete Docker documentation.
+
+### Option 2: Local Development
+
+#### 1. Create Virtual Environment
 
 ```bash
 cd backend
@@ -67,7 +92,7 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-### 2. Install Dependencies
+#### 2. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -75,7 +100,7 @@ pip install -r requirements.txt
 
 **Note**: First run will download the embedding model (~80MB) and may take a minute.
 
-### 3. Configure Environment
+#### 3. Configure Environment
 
 ```bash
 cp .env.example .env
@@ -83,7 +108,7 @@ cp .env.example .env
 
 Edit `.env` if needed. Default values work for local development.
 
-### 4. Start the Server
+#### 4. Start the Server
 
 ```bash
 # Development mode (auto-reload)
@@ -317,10 +342,16 @@ This backend includes production-grade features implemented across multiple phas
 - ✅ **Enhanced health checks** with cache stats
 - ✅ **Context window limiting** for optimal LLM performance
 
+**Phase 4: Containerization & Deployment**
+- ✅ **Docker containerization** (multi-stage builds, production-ready)
+- ✅ **Docker Compose orchestration** (backend, frontend, Redis, Ollama)
+- ✅ **Development environment** with hot-reload support
+- ✅ **Production optimizations** (non-root users, health checks, volume persistence)
+- ✅ **Nginx reverse proxy** with API routing and WebSocket support
+
 ### Future Enhancements
 
-- Docker containerization
-- Kubernetes deployment configuration
+- Kubernetes deployment configuration with Helm charts
 - Additional language support (Rust, C++, Java AST parsing)
 - Multi-tenant support with collection isolation
 - API rate limiting per client
