@@ -8,7 +8,53 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue.svg)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-DevDocs AI is a sophisticated AI-powered code documentation assistant that enables natural language interaction with your codebase. Upload your code, ask questions, and receive accurate answers with source citations—all powered by local LLMs and advanced RAG (Retrieval-Augmented Generation) techniques.
+DevDocs AI is a sophisticated AI-powered code documentation assistant that enables natural language interaction with your codebase. Upload your code or point it at a GitHub repo, ask questions, and receive accurate answers with source citations—powered by Groq, HuggingFace, and Qdrant Cloud.
+
+---
+
+## Live Demo
+
+> **Backend:** `https://your-app.up.railway.app`
+> **Frontend:** `https://devdocs-ai.vercel.app`
+
+---
+
+## Architecture
+
+```
+GitHub URL ──┐
+             ├──► gitpython clone ──► Existing pipeline ──► Qdrant Cloud
+File Upload ─┘       (depth=1)        (chunk → embed)
+
+Chat Question ──► HuggingFace API (embedding) ──► Qdrant (search)
+                                                       │
+                                              Groq API (llama-3.3-70b)
+                                                       │
+                                              WebSocket stream ──► Browser
+
+Cloud Stack:
+  LLM:        Groq (llama-3.3-70b-versatile)
+  Embeddings: HuggingFace Inference API (all-MiniLM-L6-v2)
+  Vector DB:  Qdrant Cloud
+  Cache:      Upstash Redis (serverless HTTP)
+  Backend:    Railway
+  Frontend:   Vercel
+```
+
+---
+
+## Two Ways to Ingest Code
+
+### 1. Upload Files
+Drag-and-drop individual source files or ZIP archives directly in the UI.
+Supports: `.py .js .ts .tsx .jsx .java .go .md .cpp .c .h .rs`
+
+### 2. GitHub Repo (New!)
+Paste any public GitHub URL — DevDocs AI will:
+1. Check the repo size via the GitHub API
+2. Shallow-clone it (`depth=1`) with gitpython
+3. Run the existing chunking → embedding → Qdrant pipeline
+4. Auto-activate the new collection so you can start chatting immediately
 
 ---
 
@@ -16,13 +62,14 @@ DevDocs AI is a sophisticated AI-powered code documentation assistant that enabl
 
 ### Core Capabilities
 - **Natural Language Queries** - Ask questions about your codebase in plain English
+- **GitHub URL Ingestion** - Index any public GitHub repo with one click
 - **Intelligent Code Ingestion** - Upload individual files, directories, or ZIP archives
 - **Semantic Search** - Vector-based retrieval finds the most relevant code segments
 - **Source Citations** - Every answer includes file paths and line numbers for verification
 - **Real-Time Streaming** - Watch answers appear token-by-token via WebSocket connections
 
 ### Production-Ready Features
-- **Redis Caching** - Achieve 95% faster repeated queries with intelligent caching layers
+- **Upstash Redis Caching** - 95% faster repeated queries with serverless HTTP cache
 - **Smart Chunking** - AST-based parsing preserves code structure for Python, JavaScript, and Markdown
 - **Prometheus Metrics** - Monitor query latency, cache hit rates, and system health in real-time
 - **Automatic Retry** - Resilient to transient failures with exponential backoff
@@ -30,7 +77,56 @@ DevDocs AI is a sophisticated AI-powered code documentation assistant that enabl
 
 ---
 
-## Architecture
+## Deploy Your Own (Free Tier)
+
+1. **Create free accounts:**
+   - [Qdrant Cloud](https://cloud.qdrant.io) — free 1GB cluster
+   - [Groq](https://console.groq.com) — free tier (generous rate limits)
+   - [HuggingFace](https://huggingface.co/settings/tokens) — free Inference API token
+   - [Upstash](https://console.upstash.com) — free Redis (10k requests/day)
+   - [Railway](https://railway.app) — $5 free credit/month
+   - [Vercel](https://vercel.com) — free hobby tier
+
+2. **Set environment variables in Railway dashboard:**
+   Copy from `backend/.env.example` and fill in your API keys.
+
+3. **Connect GitHub repo to Railway (backend) and Vercel (frontend):**
+   - Railway: New Project → Deploy from GitHub → select `devdocs-ai` → root is `/`
+   - Vercel: New Project → Import → select `devdocs-ai` → root directory: `frontend`
+
+4. **Done.** Railway uses `nixpacks.toml` automatically; Vercel uses `frontend/vercel.json`.
+
+---
+
+## Local Development
+
+<details>
+<summary>Run the full stack locally with Docker</summary>
+
+See [DOCKER.md](DOCKER.md) for Docker Compose instructions.
+
+Or run manually:
+
+```bash
+# Backend
+cd backend
+python3.11 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # fill in API keys
+uvicorn app.main:app --reload
+
+# Frontend
+cd frontend
+npm install
+cp .env.example .env   # set VITE_API_BASE_URL=http://localhost:8000/api/v1
+npm run dev
+```
+
+</details>
+
+---
+
+## Architecture (Cloud Stack)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

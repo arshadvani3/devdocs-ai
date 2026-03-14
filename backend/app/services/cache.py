@@ -1,22 +1,26 @@
 """
-Redis-based caching service for embeddings and query responses.
+Upstash Redis-based caching service for embeddings and query responses.
+
+Uses the Upstash Redis HTTP REST client instead of TCP-based redis-py,
+making it compatible with serverless environments like Railway.
 """
 
 import logging
 import json
 import hashlib
+import asyncio
 from typing import Optional, List, Dict, Any
-from redis.asyncio import Redis
+from upstash_redis import Redis
+
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class CacheService:
-    """Async Redis cache for embeddings and responses."""
+    """Upstash Redis cache for embeddings and responses (HTTP-based)."""
 
     def __init__(self):
-        self.redis_url = settings.redis_url
         self._client: Optional[Redis] = None
         self._stats = {
             "hits": 0,
@@ -27,20 +31,14 @@ class CacheService:
             "response_misses": 0,
         }
 
-    async def _get_client(self) -> Redis:
-        """Lazy initialize Redis connection."""
+    def _get_client(self) -> Redis:
+        """Lazy initialize Upstash Redis HTTP client."""
         if self._client is None:
-            try:
-                self._client = await Redis.from_url(
-                    self.redis_url,
-                    decode_responses=False,  # We'll handle encoding
-                    socket_connect_timeout=5
-                )
-                await self._client.ping()
-                logger.info(f"✓ Redis connected: {self.redis_url}")
-            except Exception as e:
-                logger.warning(f"Redis connection failed: {e}")
-                raise
+            self._client = Redis(
+                url=settings.upstash_redis_rest_url,
+                token=settings.upstash_redis_rest_token,
+            )
+            logger.info("✓ Upstash Redis client initialized")
         return self._client
 
     def _hash_key(self, text: str) -> str:
@@ -55,9 +53,9 @@ class CacheService:
         try:
             from app.services.metrics import cache_hit_counter, cache_miss_counter
 
-            client = await self._get_client()
+            client = self._get_client()
             key = f"embed:{self._hash_key(text)}"
-            cached = await client.get(key)
+            cached = await asyncio.to_thread(client.get, key)
 
             if cached:
                 self._stats["embedding_hits"] += 1
@@ -80,12 +78,10 @@ class CacheService:
             return
 
         try:
-            client = await self._get_client()
+            client = self._get_client()
             key = f"embed:{self._hash_key(text)}"
-            await client.setex(
-                key,
-                settings.cache_ttl_embeddings,
-                json.dumps(embedding)
+            await asyncio.to_thread(
+                client.set, key, json.dumps(embedding), ex=settings.cache_ttl_embeddings
             )
             logger.debug(f"Cached embedding: {key[:20]}...")
         except Exception as e:
@@ -99,9 +95,9 @@ class CacheService:
         try:
             from app.services.metrics import cache_hit_counter, cache_miss_counter
 
-            client = await self._get_client()
+            client = self._get_client()
             key = f"query:{self._hash_key(question)}"
-            cached = await client.get(key)
+            cached = await asyncio.to_thread(client.get, key)
 
             if cached:
                 self._stats["response_hits"] += 1
@@ -129,30 +125,28 @@ class CacheService:
             return
 
         try:
-            client = await self._get_client()
+            client = self._get_client()
             key = f"query:{self._hash_key(question)}"
             data = {
                 "answer": answer,
                 "sources": sources,
                 "cached_at": __import__("time").time()
             }
-            await client.setex(
-                key,
-                settings.cache_ttl_responses,
-                json.dumps(data)
+            await asyncio.to_thread(
+                client.set, key, json.dumps(data), ex=settings.cache_ttl_responses
             )
             logger.debug(f"Cached response: {key[:20]}...")
         except Exception as e:
             logger.warning(f"Cache set_response error: {e}")
 
     async def check_health(self) -> bool:
-        """Check Redis connectivity."""
+        """Check Upstash Redis connectivity."""
         try:
-            client = await self._get_client()
-            await client.ping()
+            client = self._get_client()
+            await asyncio.to_thread(client.ping)
             return True
         except Exception as e:
-            logger.error(f"Redis health check failed: {e}")
+            logger.error(f"Upstash Redis health check failed: {e}")
             return False
 
     def get_stats(self) -> Dict[str, Any]:
@@ -171,10 +165,8 @@ class CacheService:
         }
 
     async def close(self):
-        """Close Redis connection."""
-        if self._client:
-            await self._client.close()
-            logger.info("Redis connection closed")
+        """No-op: Upstash Redis is HTTP-based, no persistent connection to close."""
+        logger.info("Upstash Redis client closed (no-op, HTTP-based)")
 
 
 # Global instance

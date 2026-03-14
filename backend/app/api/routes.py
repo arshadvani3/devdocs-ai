@@ -19,11 +19,19 @@ from app.models import (
     HealthResponse,
     ErrorResponse,
     SourceCitation,
+    GitHubIngestRequest,
+    GitHubIngestResponse,
 )
 from app.services.ingestion import get_ingestion_service
 from app.services.retrieval import get_vector_store
 from app.services.llm import get_ollama_service
 from app.services.embeddings import get_embedding_service
+from app.services.github_ingestion import (
+    ingest_github_repo,
+    validate_github_url,
+    get_repo_name,
+    _collection_name_from_repo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +65,9 @@ async def health_check():
         vector_store = get_vector_store()
 
         services_status = {
-            "ollama": await ollama_service.check_health(),
-            "chromadb": vector_store.check_health(),
-            "embeddings": embedding_service.check_health(),
+            "groq": await ollama_service.check_health(),
+            "qdrant": vector_store.check_health(),
+            "embeddings": await embedding_service.check_health(),
         }
 
         # Check cache if enabled
@@ -101,8 +109,8 @@ async def health_check():
         return HealthResponse(
             status="unhealthy",
             services={
-                "ollama": False,
-                "chromadb": False,
+                "groq": False,
+                "qdrant": False,
                 "embeddings": False,
             }
         )
@@ -178,7 +186,7 @@ async def ingest_documents(
             message=f"Successfully processed {files_processed} file(s)",
             files_processed=files_processed,
             total_chunks=total_chunks,
-            collection_name=collection_name or settings.chroma_collection_name,
+            collection_name=collection_name or settings.qdrant_collection_name,
             processing_time_seconds=round(processing_time, 2),
             file_metadata=file_metadata,
         )
@@ -265,7 +273,7 @@ async def query_knowledge_base(request: QueryRequest):
                        "Please try rephrasing or ensure documents have been ingested.",
                 sources=[],
                 processing_time_seconds=round(time.time() - start_time, 2),
-                model_used=settings.ollama_model,
+                model_used=settings.groq_model,
             )
 
         # Extract chunks for context
@@ -291,7 +299,7 @@ async def query_knowledge_base(request: QueryRequest):
             answer=answer,
             sources=citations,
             processing_time_seconds=round(processing_time, 2),
-            model_used=settings.ollama_model,
+            model_used=settings.groq_model,
         )
 
         # Track success metrics
@@ -382,7 +390,7 @@ async def metrics():
     from app.services.metrics import export_metrics, get_content_type, update_chromadb_metrics
     from starlette.responses import Response
 
-    # Update ChromaDB metrics before exporting
+    # Update vector store metrics before exporting
     try:
         vector_store = get_vector_store()
         update_chromadb_metrics(vector_store)
@@ -393,3 +401,95 @@ async def metrics():
         content=export_metrics(),
         media_type=get_content_type()
     )
+
+
+# ============================================================================
+# GitHub Repository Ingestion Endpoints
+# ============================================================================
+
+@router.post(
+    "/ingest/github",
+    response_model=GitHubIngestResponse,
+    summary="Ingest a GitHub repository",
+    description="Clone a public GitHub repo and index it into the knowledge base",
+)
+async def ingest_github(request: GitHubIngestRequest):
+    """
+    Clone a public GitHub repository and ingest it into the knowledge base.
+
+    Validates the URL, checks repo size, clones with depth=1, runs the existing
+    ingestion pipeline (chunking → embedding → Qdrant), then cleans up.
+
+    Args:
+        request: GitHubIngestRequest containing repo_url
+
+    Returns:
+        GitHubIngestResponse with ingestion statistics
+
+    Raises:
+        HTTPException 400: Invalid URL, private repo, or repo too large
+        HTTPException 500: Network or ingestion failure
+    """
+    try:
+        result = await ingest_github_repo(repo_url=request.repo_url)
+
+        return GitHubIngestResponse(
+            success=True,
+            repo_url=result["repo_url"],
+            repo_name=result["repo_name"],
+            total_files=result["total_files"],
+            processed_files=result["processed_files"],
+            total_chunks=result["total_chunks"],
+            collection_name=result["collection_name"],
+            time_taken_seconds=result["time_taken_seconds"],
+        )
+
+    except ValueError as e:
+        logger.warning(f"GitHub ingestion validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"GitHub ingestion failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"GitHub ingestion failed: {str(e)}"
+        )
+
+
+@router.get(
+    "/ingest/github/status/{repo_name}",
+    summary="Check GitHub repo ingestion status",
+    description="Check whether a GitHub repo has been indexed and how many chunks it has",
+)
+async def github_repo_status(repo_name: str):
+    """
+    Check whether a GitHub repository has been indexed in the knowledge base.
+
+    Args:
+        repo_name: Repository slug (e.g. 'expressjs-express', using hyphens)
+
+    Returns:
+        dict with indexed status, collection_name, and total_chunks
+    """
+    try:
+        # repo_name in the URL uses hyphens (e.g. expressjs-express)
+        # collection names are already stored that way
+        collection_name = repo_name.lower()
+        vector_store = get_vector_store(collection_name)
+        stats = vector_store.get_collection_stats()
+
+        total_chunks = stats.get("total_chunks", 0)
+
+        return {
+            "indexed": total_chunks > 0,
+            "collection_name": collection_name,
+            "total_chunks": total_chunks,
+        }
+
+    except Exception as e:
+        logger.error(f"Error checking GitHub repo status: {e}")
+        # Return not-indexed rather than erroring, collection may not exist yet
+        return {
+            "indexed": False,
+            "collection_name": repo_name.lower(),
+            "total_chunks": 0,
+        }

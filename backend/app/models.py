@@ -231,6 +231,51 @@ class HealthResponse(BaseModel):
 
 
 # ============================================================================
+# GitHub Ingestion Models
+# ============================================================================
+
+class GitHubIngestRequest(BaseModel):
+    """Request model for GitHub repository ingestion."""
+    repo_url: str = Field(
+        ...,
+        description="Public GitHub repository URL (e.g. https://github.com/expressjs/express)"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "repo_url": "https://github.com/expressjs/express"
+            }
+        }
+
+
+class GitHubIngestResponse(BaseModel):
+    """Response model for GitHub repository ingestion."""
+    success: bool
+    repo_url: str
+    repo_name: str
+    total_files: int
+    processed_files: int
+    total_chunks: int
+    collection_name: str
+    time_taken_seconds: float
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "repo_url": "https://github.com/expressjs/express",
+                "repo_name": "expressjs/express",
+                "total_files": 45,
+                "processed_files": 20,
+                "total_chunks": 284,
+                "collection_name": "expressjs-express",
+                "time_taken_seconds": 12.3
+            }
+        }
+
+
+# ============================================================================
 # Error Response Models
 # ============================================================================
 

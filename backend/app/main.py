@@ -30,9 +30,9 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     logger.info(f"Starting {settings.app_name} v1.0.0")
     logger.info(f"Environment: {'DEBUG' if settings.debug else 'PRODUCTION'}")
-    logger.info(f"Ollama: {settings.ollama_base_url} (model: {settings.ollama_model})")
-    logger.info(f"ChromaDB: {settings.chroma_persist_directory}")
-    logger.info(f"Embedding model: {settings.embedding_model}")
+    logger.info(f"LLM: Groq ({settings.groq_model})")
+    logger.info(f"Vector DB: Qdrant Cloud ({settings.qdrant_url})")
+    logger.info(f"Embedding: HuggingFace API ({settings.embedding_model})")
     logger.info(f"WebSocket streaming: ws://localhost:{settings.api_port}/api/v1/stream")
     logger.info("=" * 60)
 

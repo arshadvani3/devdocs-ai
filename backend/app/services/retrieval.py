@@ -1,14 +1,24 @@
 """
-Vector storage and retrieval service using ChromaDB.
+Vector storage and retrieval service using Qdrant Cloud.
 
-This module handles storing document chunks with embeddings in ChromaDB
+This module handles storing document chunks with embeddings in Qdrant
 and retrieving relevant chunks based on similarity search.
 """
 
 import logging
+import uuid
+import asyncio
 from typing import List, Optional, Dict, Any, Tuple
-import chromadb
-from chromadb.config import Settings as ChromaSettings
+from qdrant_client import QdrantClient
+from qdrant_client.models import (
+    Distance,
+    VectorParams,
+    PointStruct,
+    Filter,
+    FieldCondition,
+    MatchValue,
+    FilterSelector,
+)
 
 from app.config import settings
 from app.models import DocumentChunk, SourceCitation
@@ -16,16 +26,17 @@ from app.services.embeddings import get_embedding_service
 
 logger = logging.getLogger(__name__)
 
+EMBEDDING_DIM = 384  # all-MiniLM-L6-v2 produces 384-dimensional embeddings
+
 
 class VectorStore:
     """
-    Vector database service using ChromaDB.
+    Vector database service using Qdrant Cloud.
 
     This class manages document storage and similarity search using
-    ChromaDB as the vector database backend.
+    Qdrant as the vector database backend.
 
     Attributes:
-        client: ChromaDB client instance
         collection_name: Name of the current collection
     """
 
@@ -37,52 +48,41 @@ class VectorStore:
             collection_name: Name of the collection to use.
                            Defaults to configured collection name.
         """
-        self.collection_name = collection_name or settings.chroma_collection_name
-        self._client: Optional[chromadb.Client] = None
-        self._collection: Optional[chromadb.Collection] = None
+        self.collection_name = collection_name or settings.qdrant_collection_name
+        self._client: Optional[QdrantClient] = None
         self.embedding_service = get_embedding_service()
 
-    def _get_client(self) -> chromadb.Client:
-        """Get or create ChromaDB client."""
+    def _get_client(self) -> QdrantClient:
+        """Get or create Qdrant client."""
         if self._client is None:
-            persist_dir = settings.get_chroma_path()
-            logger.info(f"Initializing ChromaDB client at {persist_dir}")
-
-            self._client = chromadb.Client(
-                ChromaSettings(
-                    persist_directory=str(persist_dir),
-                    anonymized_telemetry=False,
-                )
+            logger.info(f"Initializing Qdrant client at {settings.qdrant_url}")
+            self._client = QdrantClient(
+                url=settings.qdrant_url,
+                api_key=settings.qdrant_api_key,
             )
-            logger.info("ChromaDB client initialized successfully")
-
+            logger.info("Qdrant client initialized successfully")
         return self._client
 
-    def _get_collection(self) -> chromadb.Collection:
-        """
-        Get or create the collection.
+    def _ensure_collection(self) -> None:
+        """Create collection if it doesn't exist."""
+        client = self._get_client()
+        try:
+            client.get_collection(self.collection_name)
+            logger.debug(f"Collection already exists: {self.collection_name}")
+        except Exception:
+            logger.info(f"Creating new collection: {self.collection_name}")
+            client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=VectorParams(
+                    size=EMBEDDING_DIM,
+                    distance=Distance.COSINE,
+                ),
+            )
+            logger.info(f"Created collection: {self.collection_name}")
 
-        Returns:
-            ChromaDB collection instance
-        """
-        if self._collection is None:
-            client = self._get_client()
-
-            try:
-                # Try to get existing collection
-                self._collection = client.get_collection(
-                    name=self.collection_name
-                )
-                logger.info(f"Retrieved existing collection: {self.collection_name}")
-            except Exception:
-                # Create new collection if it doesn't exist
-                self._collection = client.create_collection(
-                    name=self.collection_name,
-                    metadata={"description": "DevDocs AI code documentation"}
-                )
-                logger.info(f"Created new collection: {self.collection_name}")
-
-        return self._collection
+    def _chunk_id_to_uuid(self, chunk_id: str) -> str:
+        """Convert string chunk ID to deterministic UUID for Qdrant."""
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, chunk_id))
 
     async def add_documents(self, chunks: List[DocumentChunk]) -> int:
         """
@@ -102,40 +102,49 @@ class VectorStore:
             return 0
 
         try:
-            collection = self._get_collection()
-
-            # Prepare data for ChromaDB
-            ids = [chunk.id for chunk in chunks]
-            documents = [chunk.text for chunk in chunks]
-            metadatas = [
-                {
-                    "file_path": chunk.file_path,
-                    "start_line": chunk.start_line,
-                    "end_line": chunk.end_line,
-                    "language": chunk.language,
-                    "chunk_index": chunk.chunk_index,
-                }
-                for chunk in chunks
-            ]
+            self._ensure_collection()
+            client = self._get_client()
 
             # Generate embeddings if not present
+            documents = [chunk.text for chunk in chunks]
             if chunks[0].embedding is None:
                 logger.info(f"Generating embeddings for {len(chunks)} chunks")
                 embeddings = await self.embedding_service.embed_batch(
-                    documents,
-                    show_progress=True
+                    documents, show_progress=True
                 )
             else:
                 embeddings = [chunk.embedding for chunk in chunks]
 
-            # Add to ChromaDB
-            logger.info(f"Adding {len(chunks)} documents to collection {self.collection_name}")
-            collection.add(
-                ids=ids,
-                documents=documents,
-                embeddings=embeddings,
-                metadatas=metadatas,
+            # Build Qdrant points with full payload
+            points = [
+                PointStruct(
+                    id=self._chunk_id_to_uuid(chunk.id),
+                    vector=embedding,
+                    payload={
+                        "chunk_id": chunk.id,
+                        "code": chunk.text,
+                        "file_path": chunk.file_path,
+                        "start_line": chunk.start_line,
+                        "end_line": chunk.end_line,
+                        "language": chunk.language,
+                        "chunk_type": "code",
+                        "chunk_index": chunk.chunk_index,
+                    },
+                )
+                for chunk, embedding in zip(chunks, embeddings)
+            ]
+
+            logger.info(
+                f"Adding {len(points)} documents to collection {self.collection_name}"
             )
+
+            def _upsert():
+                client.upsert(
+                    collection_name=self.collection_name,
+                    points=points,
+                )
+
+            await asyncio.to_thread(_upsert)
 
             logger.info(f"Successfully added {len(chunks)} documents")
             return len(chunks)
@@ -168,45 +177,49 @@ class VectorStore:
             ...     print(f"{chunk.file_path}:{chunk.start_line} (score: {score})")
         """
         try:
-            collection = self._get_collection()
+            self._ensure_collection()
+            client = self._get_client()
 
-            # Generate query embedding
             logger.info(f"Searching for: '{query}' (top_k={top_k})")
             query_embedding = await self.embedding_service.embed_query(query)
 
-            # Perform similarity search
-            results = collection.query(
-                query_embeddings=[query_embedding],
-                n_results=top_k,
-                where=filter_dict,  # Optional metadata filtering
-            )
+            # Build optional filter
+            qdrant_filter = None
+            if filter_dict:
+                conditions = [
+                    FieldCondition(key=k, match=MatchValue(value=v))
+                    for k, v in filter_dict.items()
+                ]
+                qdrant_filter = Filter(must=conditions)
 
-            # Parse results
+            def _search():
+                return client.search(
+                    collection_name=self.collection_name,
+                    query_vector=query_embedding,
+                    limit=top_k,
+                    query_filter=qdrant_filter,
+                    with_payload=True,
+                )
+
+            results = await asyncio.to_thread(_search)
+
             chunks_with_scores: List[Tuple[DocumentChunk, float]] = []
+            for hit in results:
+                payload = hit.payload or {}
+                chunk = DocumentChunk(
+                    id=payload.get("chunk_id", str(hit.id)),
+                    text=payload.get("code", ""),
+                    file_path=payload.get("file_path", ""),
+                    start_line=payload.get("start_line", 1),
+                    end_line=payload.get("end_line", 1),
+                    language=payload.get("language", "unknown"),
+                    chunk_index=payload.get("chunk_index", 0),
+                )
+                # Qdrant cosine scores are already in [0, 1] range for normalized vectors
+                similarity_score = float(hit.score)
+                chunks_with_scores.append((chunk, similarity_score))
 
-            if results["ids"] and len(results["ids"][0]) > 0:
-                for i in range(len(results["ids"][0])):
-                    chunk = DocumentChunk(
-                        id=results["ids"][0][i],
-                        text=results["documents"][0][i],
-                        file_path=results["metadatas"][0][i]["file_path"],
-                        start_line=results["metadatas"][0][i]["start_line"],
-                        end_line=results["metadatas"][0][i]["end_line"],
-                        language=results["metadatas"][0][i]["language"],
-                        chunk_index=results["metadatas"][0][i]["chunk_index"],
-                    )
-
-                    # ChromaDB returns distances, convert to similarity score
-                    # Lower distance = higher similarity
-                    distance = results["distances"][0][i]
-                    similarity_score = 1.0 / (1.0 + distance)
-
-                    chunks_with_scores.append((chunk, similarity_score))
-
-                logger.info(f"Found {len(chunks_with_scores)} results")
-            else:
-                logger.warning("No results found for query")
-
+            logger.info(f"Found {len(chunks_with_scores)} results")
             return chunks_with_scores
 
         except Exception as e:
@@ -226,20 +239,37 @@ class VectorStore:
             Number of chunks deleted
         """
         try:
-            collection = self._get_collection()
+            client = self._get_client()
 
-            # Query for all chunks with this file_path
-            results = collection.get(
-                where={"file_path": file_path}
+            count_filter = Filter(
+                must=[FieldCondition(key="file_path", match=MatchValue(value=file_path))]
             )
 
-            if results["ids"]:
-                collection.delete(ids=results["ids"])
-                logger.info(f"Deleted {len(results['ids'])} chunks from {file_path}")
-                return len(results["ids"])
+            # Count before deleting
+            count_result = client.count(
+                collection_name=self.collection_name,
+                count_filter=count_filter,
+            )
+            count = count_result.count
+
+            if count > 0:
+                client.delete(
+                    collection_name=self.collection_name,
+                    points_selector=FilterSelector(
+                        filter=Filter(
+                            must=[
+                                FieldCondition(
+                                    key="file_path", match=MatchValue(value=file_path)
+                                )
+                            ]
+                        )
+                    ),
+                )
+                logger.info(f"Deleted {count} chunks from {file_path}")
             else:
                 logger.info(f"No chunks found for {file_path}")
-                return 0
+
+            return count
 
         except Exception as e:
             logger.error(f"Error deleting chunks for {file_path}: {e}")
@@ -253,13 +283,14 @@ class VectorStore:
             Dictionary with collection statistics
         """
         try:
-            collection = self._get_collection()
-            count = collection.count()
+            client = self._get_client()
+            info = client.get_collection(self.collection_name)
+            count = info.points_count or 0
 
             return {
                 "collection_name": self.collection_name,
                 "total_chunks": count,
-                "embedding_dimension": self.embedding_service.embedding_dim,
+                "embedding_dimension": EMBEDDING_DIM,
             }
         except Exception as e:
             logger.error(f"Error getting collection stats: {e}")
@@ -277,9 +308,8 @@ class VectorStore:
             True if healthy, False otherwise
         """
         try:
-            collection = self._get_collection()
-            # Try a simple operation
-            collection.count()
+            client = self._get_client()
+            client.get_collections()
             return True
         except Exception as e:
             logger.error(f"Vector store health check failed: {e}")
@@ -300,7 +330,6 @@ class VectorStore:
         """
         citations = []
         for chunk, score in results:
-            # Truncate text snippet to reasonable length
             snippet = chunk.text[:200] + "..." if len(chunk.text) > 200 else chunk.text
 
             citation = SourceCitation(

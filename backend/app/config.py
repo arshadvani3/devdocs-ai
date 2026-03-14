@@ -2,13 +2,11 @@
 Application configuration management using Pydantic settings.
 
 This module handles all environment variables and configuration settings
-for the DevDocs AI application.
+for the DevDocs AI application (cloud-hosted stack).
 """
 
 import logging
-from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -20,19 +18,18 @@ class Settings(BaseSettings):
         debug: Enable debug mode (verbose logging, auto-reload)
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR)
 
-        # Ollama LLM Settings
-        ollama_base_url: Base URL for Ollama API
-        ollama_model: LLM model name (e.g., llama3.1:8b)
-        ollama_timeout: Request timeout in seconds
+        # Groq LLM Settings
+        groq_api_key: Groq API key
+        groq_model: LLM model name on Groq
 
         # Embedding Settings
-        embedding_model: sentence-transformers model name
-        embedding_batch_size: Batch size for embedding generation
-        embedding_device: Device for embeddings (cpu, cuda, mps)
+        hf_api_key: HuggingFace Inference API key
+        embedding_model: HuggingFace model name (used in HF API URL)
 
-        # ChromaDB Settings
-        chroma_persist_directory: Directory to persist ChromaDB data
-        chroma_collection_name: Default collection name
+        # Qdrant Settings
+        qdrant_url: Qdrant Cloud cluster URL
+        qdrant_api_key: Qdrant Cloud API key
+        qdrant_collection_name: Default collection name
 
         # Document Processing Settings
         max_chunk_size: Maximum characters per chunk
@@ -42,6 +39,17 @@ class Settings(BaseSettings):
         # RAG Settings
         retrieval_top_k: Number of documents to retrieve for RAG
         rag_context_window: Maximum context window for LLM
+
+        # Cache Settings
+        upstash_redis_rest_url: Upstash Redis REST endpoint URL
+        upstash_redis_rest_token: Upstash Redis REST auth token
+        enable_caching: Enable/disable caching layer
+        cache_ttl_embeddings: TTL for cached embeddings (seconds)
+        cache_ttl_responses: TTL for cached query responses (seconds)
+
+        # Performance Settings
+        max_context_chars: Max chars of context sent to LLM
+        enable_smart_chunking: Use AST-based chunking for supported languages
 
         # API Settings
         api_host: API server host
@@ -54,19 +62,19 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
 
-    # Ollama LLM Settings
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "llama3.1:8b"
-    ollama_timeout: int = 300  # 5 minutes for complex queries (increased from 120s)
+    # Groq LLM Settings
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
 
-    # Embedding Settings
+    # Embedding Settings (HuggingFace Inference API)
+    hf_api_key: str = ""
     embedding_model: str = "all-MiniLM-L6-v2"
-    embedding_batch_size: int = 32
-    embedding_device: str = "cpu"  # cpu, cuda, or mps (for Apple Silicon)
+    embedding_batch_size: int = 5  # HF free tier safe batch size
 
-    # ChromaDB Settings
-    chroma_persist_directory: str = "./chroma_db"
-    chroma_collection_name: str = "code_docs"
+    # Qdrant Cloud Settings
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
+    qdrant_collection_name: str = "devdocs"
 
     # Document Processing Settings
     max_chunk_size: int = 500
@@ -77,22 +85,27 @@ class Settings(BaseSettings):
     retrieval_top_k: int = 5
     rag_context_window: int = 4000  # Characters, not tokens
 
-    # Cache Settings (Phase 3)
-    redis_url: str = "redis://localhost:6379/0"
+    # Upstash Redis Settings
+    upstash_redis_rest_url: str = ""
+    upstash_redis_rest_token: str = ""
     enable_caching: bool = True
-    cache_ttl_embeddings: int = 86400  # 24 hours
-    cache_ttl_responses: int = 3600    # 1 hour
+    cache_ttl_embeddings: int = 86400   # 24 hours
+    cache_ttl_responses: int = 3600     # 1 hour
 
-    # Performance Settings (Phase 3)
+    # Performance Settings
     max_context_chars: int = 2000  # Limit context to prevent overwhelming LLM
 
-    # Chunking Settings (Phase 3)
+    # Chunking Settings
     enable_smart_chunking: bool = True  # Use AST-based chunking for supported languages
 
     # API Settings
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    cors_origins: str = (
+        "http://localhost:3000,"
+        "http://localhost:5173,"
+        "https://devdocs-ai.vercel.app"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -110,12 +123,6 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         """Convert comma-separated CORS origins to list."""
         return [origin.strip() for origin in self.cors_origins.split(",")]
-
-    def get_chroma_path(self) -> Path:
-        """Get ChromaDB persist directory as Path object."""
-        path = Path(self.chroma_persist_directory)
-        path.mkdir(parents=True, exist_ok=True)
-        return path
 
 
 # Global settings instance
@@ -139,9 +146,8 @@ def setup_logging() -> None:
     )
 
     # Set specific loggers to WARNING to reduce noise
-    logging.getLogger("chromadb").setLevel(logging.WARNING)
-    logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("qdrant_client").setLevel(logging.WARNING)
 
 
 # Initialize logging on module import
