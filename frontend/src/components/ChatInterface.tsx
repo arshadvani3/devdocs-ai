@@ -1,6 +1,5 @@
 /**
  * ChatInterface component - main container for the chat application.
- * Integrates upload panel, message list, and input components.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -24,46 +23,24 @@ export function ChatInterface() {
     clearMessages,
   } = useChat();
   const [activeCollection, setActiveCollection] = useState<string | undefined>(undefined);
-
-  // Track last processed message to prevent duplicate processing
   const lastProcessedMessageRef = useRef<WebSocketMessage | null>(null);
 
-  // Handle incoming WebSocket messages
   useEffect(() => {
-    // Skip if no message or if we've already processed this exact message object
-    if (!lastMessage || lastMessage === lastProcessedMessageRef.current) {
-      return;
-    }
-
-    // Mark this message as processed
+    if (!lastMessage || lastMessage === lastProcessedMessageRef.current) return;
     lastProcessedMessageRef.current = lastMessage;
-
-    console.log('Processing WebSocket message:', lastMessage.type, lastMessage.content?.substring(0, 20));
 
     switch (lastMessage.type) {
       case 'token':
-        // First token - start new assistant message
         if (!isStreaming || messages[messages.length - 1]?.type !== 'assistant') {
           startAssistantMessage();
         }
-        // Append token to current message
-        if (lastMessage.content) {
-          appendToAssistantMessage(lastMessage.content);
-        }
+        if (lastMessage.content) appendToAssistantMessage(lastMessage.content);
         break;
-
       case 'sources':
-        // Complete the message with sources
         completeAssistantMessage(lastMessage.data || []);
         break;
-
       case 'error':
-        // Handle error
-        console.error('WebSocket error:', lastMessage.message);
-        if (messages[messages.length - 1]?.streaming) {
-          completeAssistantMessage([]);
-        }
-        // Could also show error in UI
+        if (messages[messages.length - 1]?.streaming) completeAssistantMessage([]);
         break;
     }
   }, [lastMessage, isStreaming, messages, startAssistantMessage, appendToAssistantMessage, completeAssistantMessage]);
@@ -78,8 +55,8 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex gap-4">
-      {/* Left panel - Upload */}
+    <div className="h-[calc(100vh-7rem)] flex gap-4">
+      {/* Left panel */}
       <div className="w-96 flex-shrink-0">
         <UploadPanel
           onUploadSuccess={(response) => {
@@ -91,41 +68,53 @@ export function ChatInterface() {
         />
       </div>
 
-      {/* Right panel - Chat */}
-      <div className="flex-1 flex flex-col bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-        {/* Connection status indicator */}
-        <div className="px-4 py-2 bg-gray-900 border-b border-gray-700 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-2 h-2 rounded-full ${
+      {/* Right panel — Chat */}
+      <div className="flex-1 flex flex-col bg-slate-900 rounded-xl border border-slate-800/80 overflow-hidden">
+        {/* Chat toolbar */}
+        <div className="px-4 py-2.5 bg-slate-900/95 border-b border-slate-800/60 flex items-center justify-between gap-3 min-h-[44px]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Connection dot */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className={`w-1.5 h-1.5 rounded-full ${
                 connectionStatus === 'connected'
-                  ? 'bg-green-500'
+                  ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]'
                   : connectionStatus === 'connecting'
-                  ? 'bg-yellow-500 animate-pulse'
-                  : 'bg-red-500'
-              }`}
-            />
-            <span className="text-sm text-gray-400">
-              {connectionStatus === 'connected'
-                ? 'Connected'
-                : connectionStatus === 'connecting'
-                ? 'Connecting...'
-                : 'Disconnected'}
-            </span>
+                  ? 'bg-amber-400 animate-pulse'
+                  : 'bg-rose-500'
+              }`} />
+              <span className="text-xs text-slate-500">
+                {connectionStatus === 'connected' ? 'Connected' :
+                 connectionStatus === 'connecting' ? 'Connecting…' : 'Disconnected'}
+              </span>
+            </div>
+
+            {/* Active collection badge */}
+            {activeCollection ? (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full min-w-0">
+                <svg className="w-3 h-3 text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+                <span className="text-xs text-indigo-300 font-mono truncate max-w-[200px]">
+                  {activeCollection}
+                </span>
+              </div>
+            ) : (
+              <span className="text-xs text-slate-600 italic">no collection active</span>
+            )}
           </div>
 
           {messages.length > 0 && (
             <button
               onClick={clearMessages}
-              className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
+              className="text-xs text-slate-600 hover:text-slate-300 transition-colors flex-shrink-0 px-2 py-1 rounded hover:bg-slate-800"
             >
-              Clear chat
+              Clear
             </button>
           )}
         </div>
 
         {/* Messages */}
-        <MessageList messages={messages} />
+        <MessageList messages={messages} hasCollection={!!activeCollection} />
 
         {/* Input */}
         <MessageInput
