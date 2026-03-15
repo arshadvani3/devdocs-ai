@@ -69,16 +69,20 @@ class VectorStore:
         try:
             client.get_collection(self.collection_name)
             logger.debug(f"Collection already exists: {self.collection_name}")
-        except Exception:
-            logger.info(f"Creating new collection: {self.collection_name}")
-            client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=VectorParams(
-                    size=EMBEDDING_DIM,
-                    distance=Distance.COSINE,
-                ),
-            )
-            logger.info(f"Created collection: {self.collection_name}")
+        except Exception as get_err:
+            logger.info(f"Collection not found ({get_err}), creating: {self.collection_name}")
+            try:
+                client.create_collection(
+                    collection_name=self.collection_name,
+                    vectors_config=VectorParams(
+                        size=EMBEDDING_DIM,
+                        distance=Distance.COSINE,
+                    ),
+                )
+                logger.info(f"Created collection: {self.collection_name}")
+            except Exception as create_err:
+                logger.error(f"Failed to create collection '{self.collection_name}': {create_err}")
+                raise
 
     def _chunk_id_to_uuid(self, chunk_id: str) -> str:
         """Convert string chunk ID to deterministic UUID for Qdrant."""

@@ -224,6 +224,9 @@ async def ingest_github_repo(
         logger.info("Chunking files and generating embeddings...")
         ingestion_service = get_ingestion_service(collection_name)
 
+        # Pre-create collection so every file can upsert without hitting 404
+        ingestion_service.vector_store._ensure_collection()
+
         files_processed, total_chunks, _ = await ingestion_service.ingest_directory(
             directory_path=str(clone_dest),
             recursive=True,
