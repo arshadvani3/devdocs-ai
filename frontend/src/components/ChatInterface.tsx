@@ -11,7 +11,7 @@ import { MessageInput } from './MessageInput';
 import { UploadPanel } from './UploadPanel';
 import type { WebSocketMessage } from '../types';
 
-const WS_URL = 'ws://localhost:8000/api/v1/stream';
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/api/v1/stream';
 
 export function ChatInterface() {
   const { sendMessage, lastMessage, connectionStatus, isStreaming } = useWebSocket(WS_URL);
