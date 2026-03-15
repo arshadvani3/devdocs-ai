@@ -18,6 +18,7 @@ from qdrant_client.models import (
     FieldCondition,
     MatchValue,
     FilterSelector,
+    PayloadSchemaType,
 )
 
 from app.config import settings
@@ -79,7 +80,13 @@ class VectorStore:
                         distance=Distance.COSINE,
                     ),
                 )
-                logger.info(f"Created collection: {self.collection_name}")
+                # Create keyword index on file_path so filter-based delete/count work
+                client.create_payload_index(
+                    collection_name=self.collection_name,
+                    field_name="file_path",
+                    field_schema=PayloadSchemaType.KEYWORD,
+                )
+                logger.info(f"Created collection with payload index: {self.collection_name}")
             except Exception as create_err:
                 logger.error(f"Failed to create collection '{self.collection_name}': {create_err}")
                 raise
@@ -197,13 +204,14 @@ class VectorStore:
                 qdrant_filter = Filter(must=conditions)
 
             def _search():
-                return client.search(
+                response = client.query_points(
                     collection_name=self.collection_name,
-                    query_vector=query_embedding,
+                    query=query_embedding,
                     limit=top_k,
                     query_filter=qdrant_filter,
                     with_payload=True,
                 )
+                return response.points
 
             results = await asyncio.to_thread(_search)
 
