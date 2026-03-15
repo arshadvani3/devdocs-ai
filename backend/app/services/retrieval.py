@@ -272,6 +272,10 @@ class VectorStore:
             return count
 
         except Exception as e:
+            err = str(e)
+            if "doesn't exist" in err or "Not found" in err:
+                logger.debug(f"Collection doesn't exist yet, nothing to delete for {file_path}")
+                return 0
             logger.error(f"Error deleting chunks for {file_path}: {e}")
             raise
 
