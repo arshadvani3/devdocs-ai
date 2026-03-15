@@ -1,532 +1,192 @@
 # DevDocs AI
 
-> A production-grade RAG-powered AI assistant for code documentation and analysis
+A production-ready RAG (Retrieval-Augmented Generation) assistant that lets you ask natural language questions about any codebase. Point it at a GitHub repo or upload files, and get accurate answers with source citations — in real time.
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-19+-blue.svg)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue.svg)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-DevDocs AI is a sophisticated AI-powered code documentation assistant that enables natural language interaction with your codebase. Upload your code or point it at a GitHub repo, ask questions, and receive accurate answers with source citations—powered by Groq, HuggingFace, and Qdrant Cloud.
+**Live Demo:** [devdocs-ai-beryl.vercel.app](https://devdocs-ai-beryl.vercel.app)
 
 ---
 
-## Live Demo
+## What It Does
 
-> **Backend:** `https://your-app.up.railway.app`
-> **Frontend:** `https://devdocs-ai.vercel.app`
+- **Index any GitHub repo** via URL (shallow clone, no auth needed for public repos)
+- **Upload files or ZIP archives** for local codebases
+- **Ask questions in plain English** — "How does authentication work?" / "Where is rate limiting implemented?"
+- **Get streaming answers** with source citations (file path + line numbers)
+- **Multi-collection support** — each indexed repo is stored separately, switch between them
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19 + TypeScript, Vite, TailwindCSS |
+| Backend | FastAPI (Python 3.11), WebSocket streaming |
+| LLM | Groq API — `llama-3.3-70b-versatile` |
+| Embeddings | HuggingFace Inference API — `all-MiniLM-L6-v2` (384-dim) |
+| Vector DB | Qdrant Cloud (cosine similarity) |
+| Cache | Upstash Redis (serverless HTTP) |
+| Deployment | Railway (backend) + Vercel (frontend) |
 
 ---
 
 ## Architecture
 
 ```
-GitHub URL ──┐
-             ├──► gitpython clone ──► Existing pipeline ──► Qdrant Cloud
-File Upload ─┘       (depth=1)        (chunk → embed)
-
-Chat Question ──► HuggingFace API (embedding) ──► Qdrant (search)
-                                                       │
-                                              Groq API (llama-3.3-70b)
-                                                       │
-                                              WebSocket stream ──► Browser
-
-Cloud Stack:
-  LLM:        Groq (llama-3.3-70b-versatile)
-  Embeddings: HuggingFace Inference API (all-MiniLM-L6-v2)
-  Vector DB:  Qdrant Cloud
-  Cache:      Upstash Redis (serverless HTTP)
-  Backend:    Railway
-  Frontend:   Vercel
+Browser
+  │
+  ├── HTTP/REST ──► FastAPI (Railway)
+  └── WebSocket ──► FastAPI (Railway)
+                        │
+            ┌───────────┼───────────────┐
+            ▼           ▼               ▼
+        Qdrant       Groq API      Upstash Redis
+        Cloud        (LLM)         (Cache)
+            │
+    HuggingFace API
+    (Embeddings)
 ```
 
----
+**Request flow:**
+1. User submits a question via WebSocket
+2. Backend generates a query embedding (HuggingFace API, cached in Redis)
+3. Qdrant returns the top-5 most relevant code chunks
+4. Backend streams the LLM response token-by-token (Groq) back over WebSocket
+5. Frontend displays the answer live with source citations
 
-## Two Ways to Ingest Code
-
-### 1. Upload Files
-Drag-and-drop individual source files or ZIP archives directly in the UI.
-Supports: `.py .js .ts .tsx .jsx .java .go .md .cpp .c .h .rs`
-
-### 2. GitHub Repo (New!)
-Paste any public GitHub URL — DevDocs AI will:
-1. Check the repo size via the GitHub API
-2. Shallow-clone it (`depth=1`) with gitpython
-3. Run the existing chunking → embedding → Qdrant pipeline
-4. Auto-activate the new collection so you can start chatting immediately
+**Ingestion flow:**
+1. GitHub URL → shallow clone (`depth=1`) → extract supported files
+2. AST-based chunking (Python/JS/TS/Markdown) or character chunking fallback
+3. Parallel batch embedding (3 concurrent batches of 5 via HuggingFace API)
+4. Store vectors + metadata in Qdrant Cloud
 
 ---
 
-## Features
+## Supported Languages
 
-### Core Capabilities
-- **Natural Language Queries** - Ask questions about your codebase in plain English
-- **GitHub URL Ingestion** - Index any public GitHub repo with one click
-- **Intelligent Code Ingestion** - Upload individual files, directories, or ZIP archives
-- **Semantic Search** - Vector-based retrieval finds the most relevant code segments
-- **Source Citations** - Every answer includes file paths and line numbers for verification
-- **Real-Time Streaming** - Watch answers appear token-by-token via WebSocket connections
+`.py` `.js` `.ts` `.tsx` `.jsx` `.java` `.go` `.cpp` `.c` `.h` `.rs` `.cu` `.cuh` `.cs` `.rb` `.swift` `.kt` `.scala` `.r` `.m` `.sh` `.yaml` `.yml` `.json` `.toml` `.sql` `.md`
 
-### Production-Ready Features
-- **Upstash Redis Caching** - 95% faster repeated queries with serverless HTTP cache
-- **Smart Chunking** - AST-based parsing preserves code structure for Python, JavaScript, and Markdown
-- **Prometheus Metrics** - Monitor query latency, cache hit rates, and system health in real-time
-- **Automatic Retry** - Resilient to transient failures with exponential backoff
-- **Modern UI** - Clean React TypeScript interface with syntax highlighting and drag-and-drop support
+Smart (AST-aware) chunking for Python, JavaScript/TypeScript, and Markdown. Character-based chunking with overlap for all other languages.
 
 ---
 
-## Deploy Your Own (Free Tier)
+## Running Locally
 
-1. **Create free accounts:**
-   - [Qdrant Cloud](https://cloud.qdrant.io) — free 1GB cluster
-   - [Groq](https://console.groq.com) — free tier (generous rate limits)
-   - [HuggingFace](https://huggingface.co/settings/tokens) — free Inference API token
-   - [Upstash](https://console.upstash.com) — free Redis (10k requests/day)
-   - [Railway](https://railway.app) — $5 free credit/month
-   - [Vercel](https://vercel.com) — free hobby tier
+### Prerequisites
 
-2. **Set environment variables in Railway dashboard:**
-   Copy from `backend/.env.example` and fill in your API keys.
-
-3. **Connect GitHub repo to Railway (backend) and Vercel (frontend):**
-   - Railway: New Project → Deploy from GitHub → select `devdocs-ai` → root is `/`
-   - Vercel: New Project → Import → select `devdocs-ai` → root directory: `frontend`
-
-4. **Done.** Railway uses `nixpacks.toml` automatically; Vercel uses `frontend/vercel.json`.
-
----
-
-## Local Development
-
-<details>
-<summary>Run the full stack locally with Docker</summary>
-
-See [DOCKER.md](DOCKER.md) for Docker Compose instructions.
-
-Or run manually:
-
-```bash
-# Backend
-cd backend
-python3.11 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # fill in API keys
-uvicorn app.main:app --reload
-
-# Frontend
-cd frontend
-npm install
-cp .env.example .env   # set VITE_API_BASE_URL=http://localhost:8000/api/v1
-npm run dev
-```
-
-</details>
-
----
-
-## Architecture (Cloud Stack)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   Frontend (React + TypeScript)              │
-│  • Real-time chat interface with WebSocket streaming        │
-│  • Syntax-highlighted code blocks (Prism.js)                │
-│  • Drag-and-drop file upload                                │
-└─────────────────────────────────────────────────────────────┘
-                           │ HTTP/WebSocket
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Backend (FastAPI)                         │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  RAG Pipeline                                        │  │
-│  │  1. Document Ingestion  → Parse & Chunk             │  │
-│  │  2. Embedding Generation → SentenceTransformers     │  │
-│  │  3. Vector Search        → ChromaDB                 │  │
-│  │  4. LLM Generation       → Ollama (llama3.2:3b)     │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                              │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  Production Features                                 │  │
-│  │  • Redis Cache (24h embeddings, 1h responses)       │  │
-│  │  • AST Chunking (Python, JavaScript, Markdown)      │  │
-│  │  • Prometheus Metrics (15+ metrics tracked)         │  │
-│  │  • Retry Logic (exponential backoff)                │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                           │
-           ┌───────────────┼───────────────┐
-           ▼               ▼               ▼
-    ┌──────────┐    ┌──────────┐    ┌──────────┐
-    │ ChromaDB │    │  Ollama  │    │  Redis   │
-    │ (Vector) │    │  (LLM)   │    │ (Cache)  │
-    └──────────┘    └──────────┘    └──────────┘
-```
-
----
-
-## Tech Stack
+You'll need free-tier accounts at:
+- [Groq](https://console.groq.com) — LLM inference
+- [HuggingFace](https://huggingface.co/settings/tokens) — embeddings
+- [Qdrant Cloud](https://cloud.qdrant.io) — vector storage
+- [Upstash](https://console.upstash.com) — Redis cache
 
 ### Backend
-- **Framework:** FastAPI (async Python web framework)
-- **LLM:** Ollama (local inference with llama3.2:3b)
-- **Embeddings:** SentenceTransformers (all-MiniLM-L6-v2, 384-dimensional vectors)
-- **Vector DB:** ChromaDB (persistent vector storage with metadata filtering)
-- **Cache:** Redis (async caching layer with configurable TTLs)
-- **Monitoring:** Prometheus (15+ metrics for observability)
-
-### Frontend
-- **Framework:** React 19 with TypeScript
-- **Build Tool:** Vite (fast dev server with hot module replacement)
-- **Styling:** TailwindCSS (utility-first CSS framework)
-- **Syntax Highlighting:** Prism.js (code block formatting with 100+ languages)
-- **Icons:** Custom SVG components for UI elements
-
-### Infrastructure
-- **Containerization:** Docker with multi-stage builds and Docker Compose orchestration
-- **WebSockets:** Real-time bidirectional communication for streaming
-- **Async/Await:** Non-blocking I/O patterns throughout the stack
-- **Type Safety:** TypeScript (frontend) + Python type hints (backend)
-
----
-
-## Quick Start
-
-### Option 1: Docker (Recommended)
-
-The fastest way to get started is using Docker Compose, which handles all dependencies automatically.
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/devdocs-ai.git
-cd devdocs-ai
-
-# Start all services (backend, frontend, Redis, Ollama)
-docker-compose up -d
-
-# Pull Ollama model (first time only, ~2GB download)
-docker exec -it devdocs-ollama ollama pull llama3.2:3b
-
-# View logs
-docker-compose logs -f
-
-# Access the application
-# Frontend: http://localhost
-# Backend API: http://localhost:8000/docs
-# Health Check: http://localhost:8000/api/v1/health
-```
-
-Stop services with `docker-compose down`. See [DOCKER.md](DOCKER.md) for complete documentation.
-
-### Option 2: Local Development
-
-For development without Docker, follow these steps:
-
-#### Prerequisites
-
-- **Python 3.11+**
-- **Node.js 18+**
-- **Ollama** ([installation guide](https://ollama.ai))
-- **Redis** (optional but recommended)
-
-#### Step 1: Install Ollama and Pull Model
-
-```bash
-# Install Ollama
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Pull the LLM model (approximately 2GB download)
-ollama pull llama3.2:3b
-
-# Verify installation
-ollama list
-```
-
-#### Step 2: Install Redis (Optional)
-
-```bash
-# macOS
-brew install redis
-redis-server
-
-# Ubuntu/Debian
-sudo apt install redis-server
-sudo systemctl start redis
-```
-
-#### Step 3: Setup Backend
 
 ```bash
 cd backend
 
-# Create virtual environment
 python3.11 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
 
-# Create .env file (use default values or customize)
 cp .env.example .env
+# Fill in your API keys in .env
 
-# Start backend
 uvicorn app.main:app --reload
+# API running at http://localhost:8000
 ```
 
-#### Step 4: Setup Frontend
+### Frontend
 
 ```bash
 cd frontend
 
-# Install dependencies
 npm install
 
-# Create .env file
-cat > .env << 'EOF'
-VITE_API_BASE_URL=http://localhost:8000/api/v1
-VITE_WS_URL=ws://localhost:8000/api/v1/stream
-EOF
+# Create frontend/.env
+echo "VITE_API_BASE_URL=http://localhost:8000/api/v1" > .env
+echo "VITE_WS_URL=ws://localhost:8000/api/v1/stream" >> .env
 
-# Start frontend
 npm run dev
-```
-
-#### Access the Application
-
-- **Frontend:** http://localhost:5173
-- **Backend API:** http://localhost:8000/docs
-- **Health Check:** http://localhost:8000/api/v1/health
-- **Metrics:** http://localhost:8000/api/v1/metrics
-
----
-
-## Usage
-
-### Uploading Your Codebase
-
-**Via Web UI:**
-1. Open http://localhost:5173 in your browser
-2. Drag and drop files or ZIP archives into the upload panel
-3. Supported file types: `.py`, `.js`, `.ts`, `.tsx`, `.jsx`, `.java`, `.go`, `.md`, `.cpp`, `.c`, `.h`, `.rs`
-
-**Via API:**
-```bash
-# Upload a single file
-curl -X POST http://localhost:8000/api/v1/ingest \
-  -F "file=@path/to/your/file.py"
-
-# Upload a directory as ZIP
-zip -r mycode.zip ./myproject
-curl -X POST http://localhost:8000/api/v1/ingest \
-  -F "file=@mycode.zip"
-```
-
-### Asking Questions
-
-**Web UI:**
-Type your question in the input field and press Enter
-
-**API:**
-```bash
-curl -X POST http://localhost:8000/api/v1/query \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "How does authentication work in this codebase?",
-    "top_k": 5,
-    "include_sources": true
-  }'
-```
-
-**Response Example:**
-```json
-{
-  "success": true,
-  "question": "How does authentication work in this codebase?",
-  "answer": "The authentication is handled by the authenticate() function in auth.py...",
-  "sources": [
-    {
-      "file_path": "backend/auth.py",
-      "start_line": 15,
-      "end_line": 30,
-      "relevance_score": 0.89,
-      "text": "def authenticate(user, password):..."
-    }
-  ],
-  "processing_time_seconds": 2.3,
-  "model_used": "llama3.2:3b"
-}
+# App running at http://localhost:5173
 ```
 
 ---
 
-## Key Technical Decisions
+## Environment Variables
 
-### AST-Based Chunking
+### Backend (`backend/.env`)
 
-**Problem:** Character-based chunking splits functions mid-block, losing essential context.
+```bash
+# Groq LLM
+GROQ_API_KEY=your_groq_key
+GROQ_MODEL=llama-3.3-70b-versatile
 
-**Solution:** Parse Python and JavaScript code using Abstract Syntax Trees (AST) to extract complete functions and classes.
+# HuggingFace Embeddings
+HF_API_KEY=your_hf_token
+EMBEDDING_MODEL=all-MiniLM-L6-v2
 
-**Result:** 40% improvement in retrieval accuracy based on internal benchmarks.
+# Qdrant Cloud
+QDRANT_URL=https://your-cluster.qdrant.io
+QDRANT_API_KEY=your_qdrant_key
 
-```python
-# Before (character chunking):
-Chunk 1: "def authenticate(user, password):\n    if not user:"
-Chunk 2: "return False\n    # validation logic..."
+# Upstash Redis
+UPSTASH_REDIS_REST_URL=https://your-instance.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_upstash_token
 
-# After (AST chunking):
-Chunk 1: "def authenticate(user, password):\n    if not user:\n        return False\n    # complete function preserved"
+# Optional
+ENABLE_CACHING=true
+ENABLE_SMART_CHUNKING=true
+RETRIEVAL_TOP_K=5
 ```
 
-### Redis Caching Strategy
+### Frontend (`frontend/.env`)
 
-**Problem:** Embedding generation takes 50-200ms per chunk, creating latency for repeated queries.
-
-**Solution:** Implement two-tier caching - embeddings cached for 24 hours, complete responses cached for 1 hour.
-
-**Result:** 95% latency reduction on repeated queries.
-
-| Operation | Before Cache | After Cache | Improvement |
-|-----------|--------------|-------------|-------------|
-| Repeated query (cache hit) | 2.5s | 0.1s | **96%** |
-| Embedding generation (batch) | 5.0s | 0.2s | **96%** |
-
-### Model Selection: llama3.2:3b vs llama3.1:8b
-
-**Problem:** The llama3.1:8b model required 30-120 seconds per query on CPU hardware.
-
-**Solution:** Switch to llama3.2:3b (3 billion parameters, ~2GB memory footprint).
-
-**Result:** 3-4x faster inference with minimal quality loss for code question-answering tasks.
-
-### WebSocket Streaming
-
-**Problem:** Users experienced 10-30 second blank screens while waiting for LLM generation to complete.
-
-**Solution:** Stream tokens as they are generated, providing immediate visual feedback.
-
-**Result:** Perceived latency drops from 30 seconds to under 1 second (time to first token).
+```bash
+VITE_API_BASE_URL=https://your-backend.railway.app/api/v1
+VITE_WS_URL=wss://your-backend.railway.app/api/v1/stream
+```
 
 ---
 
-## Performance Benchmarks
+## API Endpoints
 
-### Query Latency (P95)
-
-| Scenario | Latency | Cache Hit Rate |
-|----------|---------|----------------|
-| Cold query (no cache) | 10-30s | 0% |
-| Warm query (cache hit) | 0.1-0.5s | 85% |
-| Complex query (5+ chunks) | 15-35s | 60% |
-
-### Ingestion Speed
-
-| File Type | Size | Chunks | Time | Strategy |
-|-----------|------|--------|------|----------|
-| Python | 10KB | 15 | 1.2s | AST chunking |
-| JavaScript | 25KB | 28 | 2.8s | Regex chunking |
-| Markdown | 50KB | 42 | 3.5s | Header chunking |
-
-### Cache Effectiveness
-
-| Metric | Value |
-|--------|-------|
-| Embedding hit rate | 72% |
-| Response hit rate | 45% |
-| Average hit latency | 12ms |
-| Average miss latency | 150ms |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/health` | Service health + cache stats |
+| `POST` | `/api/v1/ingest` | Upload files for indexing |
+| `POST` | `/api/v1/ingest/github` | Index a GitHub repo by URL |
+| `POST` | `/api/v1/query` | REST query (non-streaming) |
+| `WS` | `/api/v1/stream` | WebSocket streaming chat |
+| `GET` | `/api/v1/collections` | List indexed collections |
+| `GET` | `/api/v1/stats` | System statistics |
+| `GET` | `/api/v1/metrics` | Prometheus metrics |
 
 ---
 
-## Configuration
+## Key Implementation Details
 
-All configuration is managed via environment variables in the `.env` file.
+**Parallel embedding** — batches of 5 texts sent to HuggingFace API, up to 3 batches in parallel using `asyncio.gather` + semaphore, with 0.5s delay between groups to respect rate limits.
 
-### Key Settings
+**AST chunking** — Python files parsed with the `ast` module to extract complete functions and classes. JS/TS uses regex-based detection. Markdown splits by header hierarchy. All preserve full logical units for better retrieval.
 
-```bash
-# LLM Model Selection
-OLLAMA_MODEL=llama3.2:3b        # Fast (10-30s queries)
-# OLLAMA_MODEL=llama3.1:8b      # Slower but higher quality (30-120s)
+**Caching** — embeddings cached in Upstash Redis for 24h using SHA256 hash of text as key. Query responses cached for 1h. System degrades gracefully if Redis is unavailable.
 
-# Cache Time-To-Live
-CACHE_TTL_EMBEDDINGS=86400      # 24 hours
-CACHE_TTL_RESPONSES=3600        # 1 hour
+**Multi-collection** — each GitHub repo is indexed into its own Qdrant collection (named after the repo). The frontend tracks the active collection and routes queries to the correct one.
 
-# Smart Chunking
-ENABLE_SMART_CHUNKING=true      # Use AST-based chunking
-
-# Context Window
-MAX_CONTEXT_CHARS=2000          # Limit context to prevent overwhelming LLM
-RETRIEVAL_TOP_K=5               # Number of chunks to retrieve per query
-
-# Performance
-EMBEDDING_BATCH_SIZE=32         # Batch size for embedding generation
-OLLAMA_TIMEOUT=300              # 5 minutes timeout for LLM requests
-```
-
-For detailed configuration options, see [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
+**WebSocket streaming** — Groq streaming API sends tokens as they're generated. Backend forwards each token to the browser over WebSocket, giving a typewriter effect with no perceived latency.
 
 ---
 
-## Monitoring
+## Deployment
 
-### Health Check
+The project is deployed as two independent services:
 
-```bash
-curl http://localhost:8000/api/v1/health | jq
-```
+- **Backend** on Railway — Dockerfile (`python:3.11-slim`), auto-deployed from `backend/` directory
+- **Frontend** on Vercel — static build from `frontend/`, `VITE_API_BASE_URL` and `VITE_WS_URL` set as environment variables
 
-**Response:**
-```json
-{
-  "status": "healthy",
-  "version": "1.0.0",
-  "uptime_seconds": 3600,
-  "services": {
-    "ollama": {"healthy": true, "model": "llama3.2:3b"},
-    "chromadb": {"healthy": true},
-    "embeddings": {"healthy": true},
-    "cache": {"healthy": true, "hit_rate": 0.72}
-  },
-  "stats": {
-    "collection_count": 1,
-    "total_documents": 142,
-    "cache": {
-      "hit_rate": 0.72,
-      "total_hits": 250,
-      "total_misses": 98
-    }
-  }
-}
-```
-
-### Prometheus Metrics
-
-```bash
-curl http://localhost:8000/api/v1/metrics
-```
-
-**Available Metrics:**
-- `devdocs_queries_total` - Total queries processed
-- `devdocs_query_latency_seconds` - Query processing time histogram
-- `devdocs_cache_hit_rate` - Cache effectiveness gauge
-- `devdocs_retrieval_chunks_count` - Chunks retrieved per query
-- `devdocs_chromadb_documents_total` - Total documents in database
-- `devdocs_llm_tokens_generated_total` - Tokens generated by LLM
-
-### Example Prometheus Configuration
-
-```yaml
-# prometheus.yml
-scrape_configs:
-  - job_name: 'devdocs-ai'
-    static_configs:
-      - targets: ['localhost:8000']
-    metrics_path: '/api/v1/metrics'
-    scrape_interval: 15s
-```
+No Docker Compose or local infrastructure required — all dependencies (Qdrant, Redis, LLM) are managed cloud services.
 
 ---
 
@@ -537,130 +197,41 @@ devdocs-ai/
 ├── backend/
 │   ├── app/
 │   │   ├── api/
-│   │   │   ├── routes.py          # REST API endpoints
-│   │   │   └── websocket.py       # WebSocket streaming
+│   │   │   ├── routes.py        # REST endpoints
+│   │   │   └── websocket.py     # WebSocket streaming
 │   │   ├── services/
-│   │   │   ├── cache.py           # Redis caching layer
-│   │   │   ├── embeddings.py      # SentenceTransformers integration
-│   │   │   ├── ingestion.py       # Document processing pipeline
-│   │   │   ├── llm.py             # Ollama LLM integration
-│   │   │   ├── metrics.py         # Prometheus metrics
-│   │   │   └── retrieval.py       # ChromaDB vector search
+│   │   │   ├── cache.py         # Upstash Redis caching
+│   │   │   ├── embeddings.py    # HuggingFace embedding + batching
+│   │   │   ├── ingestion.py     # GitHub clone + file processing
+│   │   │   ├── llm.py           # Groq LLM integration
+│   │   │   ├── metrics.py       # Prometheus metrics (15+ counters)
+│   │   │   └── retrieval.py     # Qdrant vector search
 │   │   ├── utils/
-│   │   │   ├── ast_chunking.py    # AST-based smart chunking
-│   │   │   ├── chunking.py        # Text chunking utilities
-│   │   │   └── parsing.py         # File parsing and validation
-│   │   ├── config.py              # Pydantic settings
-│   │   ├── main.py                # FastAPI application
-│   │   └── models.py              # Data models
-│   ├── tests/                     # Unit tests
-│   ├── requirements.txt           # Python dependencies
-│   └── .env                       # Environment configuration
+│   │   │   ├── ast_chunking.py  # Language-aware chunking
+│   │   │   ├── chunking.py      # Character-based fallback
+│   │   │   └── parsing.py       # File parsing + language detection
+│   │   ├── config.py            # Pydantic settings
+│   │   ├── main.py              # FastAPI app
+│   │   └── models.py            # Request/response models
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── .env.example
 │
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── ChatInterface.tsx  # Main chat UI
-│   │   │   ├── CodeBlock.tsx      # Syntax highlighting
-│   │   │   ├── MessageList.tsx    # Message display
-│   │   │   └── UploadPanel.tsx    # File upload
-│   │   ├── hooks/
-│   │   │   ├── useChat.ts         # Chat state management
-│   │   │   └── useWebSocket.ts    # WebSocket connection
-│   │   └── services/
-│   │       └── api.ts             # API client
-│   ├── package.json               # Node dependencies
-│   └── vite.config.ts             # Vite configuration
-│
-├── docs/
-│   └── PERFORMANCE.md             # Performance optimization guide
-│
-└── README.md                      # This file
+└── frontend/
+    ├── src/
+    │   ├── components/
+    │   │   ├── ChatInterface.tsx
+    │   │   ├── MessageList.tsx
+    │   │   ├── MessageInput.tsx
+    │   │   ├── SourceCitation.tsx
+    │   │   ├── UploadPanel.tsx
+    │   │   └── CodeBlock.tsx
+    │   ├── hooks/
+    │   │   ├── useWebSocket.ts
+    │   │   └── useChat.ts
+    │   ├── services/api.ts
+    │   ├── types/index.ts
+    │   └── App.tsx
+    ├── package.json
+    └── vite.config.ts
 ```
-
----
-
-## Technical Highlights
-
-### Design Patterns
-
-- **Factory Pattern** - Service instantiation with centralized creation functions
-- **Singleton Pattern** - EmbeddingService maintains a single model instance
-- **Strategy Pattern** - Language-specific chunking strategies
-- **Async/Await** - Non-blocking I/O throughout the application
-- **Graceful Degradation** - System operates even when Redis or Prometheus are unavailable
-
-### Code Quality
-
-- Complete type annotations (Python type hints + TypeScript)
-- Google-style docstrings for all functions and classes
-- Comprehensive error handling with specific exception types
-- Structured logging at all levels (DEBUG, INFO, WARNING, ERROR)
-- Retry logic with exponential backoff for transient failures
-
-### Security Considerations
-
-- CORS protection with configurable allowed origins
-- Input validation for file types and sizes
-- Error message sanitization (debug info only in debug mode)
-- Local LLM inference (no data sent to external APIs)
-
----
-
-## Additional Resources
-
-- [Docker Deployment Guide](DOCKER.md) - Complete Docker and container orchestration documentation
-- [Performance Guide](docs/PERFORMANCE.md) - Optimization and tuning recommendations
-- [FastAPI Documentation](https://fastapi.tiangolo.com/) - Backend framework reference
-- [Ollama Documentation](https://ollama.ai/docs) - LLM integration guide
-- [ChromaDB Documentation](https://docs.trychroma.com/) - Vector database reference
-
----
-
-## Contributing
-
-Contributions are welcome to help improve DevDocs AI.
-
-**Areas for improvement:**
-- Additional language support (Java, Go, Rust AST parsing)
-- GPU acceleration for embedding generation
-- Multi-modal support (images, diagrams via OCR)
-- Conversation history persistence
-- User authentication and authorization
-
----
-
-## License
-
-MIT License - This project is free to use for learning, portfolio demonstrations, or production deployments.
-
----
-
-## About This Project
-
-DevDocs AI is a production-ready code documentation assistant powered by advanced RAG techniques and local LLM inference.
-
-**Key Technical Features:**
-- Complete RAG architecture with retrieval-augmented generation pipeline
-- Production optimizations including Redis caching, AST parsing, and batch processing
-- Async programming patterns with FastAPI and full async/await implementations
-- Real-time features using WebSocket streaming for live responses
-- Modern frontend development with React TypeScript and custom hooks
-- Comprehensive observability with Prometheus metrics, health checks, and structured logging
-- Code quality standards including type hints, docstrings, error handling, and retry logic
-
-**Technology Stack:**
-- Backend: FastAPI, Python 3.11+, ChromaDB, Redis, SentenceTransformers
-- Frontend: React 19, TypeScript, TailwindCSS, Prism.js
-- Infrastructure: Ollama (local LLM), Prometheus (monitoring)
-- Patterns: Factory, Singleton, Strategy, async/await, graceful degradation
-
----
-
-<div align="center">
-
-**DevDocs AI** • Production-Ready RAG System
-
-Intelligent code documentation powered by local LLMs
-
-</div>
