@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     # Document Processing Settings
     max_chunk_size: int = 500
     chunk_overlap: int = 50
-    supported_extensions: str = ".py,.js,.ts,.java,.go,.md,.tsx,.jsx,.cpp,.c,.h,.rs"
+    supported_extensions: str = ".py,.js,.ts,.java,.go,.md,.tsx,.jsx,.cpp,.c,.h,.rs,.cu,.cuh,.cs,.rb,.swift,.kt,.scala,.r,.m,.sh,.yaml,.yml,.json,.toml,.sql"
 
     # RAG Settings
     retrieval_top_k: int = 5
