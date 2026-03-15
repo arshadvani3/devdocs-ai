@@ -3,7 +3,7 @@
  * Integrates upload panel, message list, and input components.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useChat } from '../hooks/useChat';
 import { MessageList } from './MessageList';
@@ -23,6 +23,7 @@ export function ChatInterface() {
     completeAssistantMessage,
     clearMessages,
   } = useChat();
+  const [activeCollection, setActiveCollection] = useState<string | undefined>(undefined);
 
   // Track last processed message to prevent duplicate processing
   const lastProcessedMessageRef = useRef<WebSocketMessage | null>(null);
@@ -68,13 +69,11 @@ export function ChatInterface() {
   }, [lastMessage, isStreaming, messages, startAssistantMessage, appendToAssistantMessage, completeAssistantMessage]);
 
   const handleSendMessage = (content: string) => {
-    // Add user message to chat
     addUserMessage(content);
-
-    // Send to WebSocket
     sendMessage({
       question: content,
       top_k: 5,
+      ...(activeCollection && { collection_name: activeCollection }),
     });
   };
 
@@ -84,7 +83,10 @@ export function ChatInterface() {
       <div className="w-96 flex-shrink-0">
         <UploadPanel
           onUploadSuccess={(response) => {
-            console.log('Upload successful:', response);
+            if (response.collection_name) setActiveCollection(response.collection_name);
+          }}
+          onGitHubSuccess={(collectionName) => {
+            setActiveCollection(collectionName);
           }}
         />
       </div>
