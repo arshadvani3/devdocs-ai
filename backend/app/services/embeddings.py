@@ -20,9 +20,10 @@ HF_API_URL = (
     "https://router.huggingface.co/hf-inference/models/"
     "sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
 )
-_BATCH_SIZE = 5          # max texts per HF API request (free tier safe)
-_BATCH_DELAY = 1.0       # seconds between batches to avoid rate limits
+_BATCH_SIZE = 5          # max texts per HF API request
+_BATCH_DELAY = 0.5       # seconds between parallel groups to avoid rate limits
 _MAX_RETRIES = 5
+_CONCURRENT_BATCHES = 3  # how many batches fire simultaneously
 _RETRY_DELAYS = [1, 2, 4, 8, 16]  # exponential backoff in seconds
 
 
@@ -209,22 +210,30 @@ class EmbeddingService:
             f"(batch_size={_BATCH_SIZE})"
         )
 
-        # Process in batches with delay to respect rate limits
+        # Split into batches and run up to _CONCURRENT_BATCHES in parallel
+        batches = [
+            to_embed[i : i + _BATCH_SIZE]
+            for i in range(0, len(to_embed), _BATCH_SIZE)
+        ]
+        num_batches = len(batches)
+        if show_progress:
+            logger.info(f"Embedding {len(to_embed)} texts in {num_batches} batches ({_CONCURRENT_BATCHES} parallel)")
+
+        semaphore = asyncio.Semaphore(_CONCURRENT_BATCHES)
+
+        async def _embed_batch(batch: List[str], idx: int) -> List[List[float]]:
+            async with semaphore:
+                if idx > 0 and idx % _CONCURRENT_BATCHES == 0:
+                    await asyncio.sleep(_BATCH_DELAY)
+                return await self._call_hf_api(batch)
+
+        batch_results = await asyncio.gather(
+            *[_embed_batch(batch, i) for i, batch in enumerate(batches)]
+        )
+
         new_embeddings: List[List[float]] = []
-        num_batches = (len(to_embed) + _BATCH_SIZE - 1) // _BATCH_SIZE
-
-        for batch_idx in range(0, len(to_embed), _BATCH_SIZE):
-            batch = to_embed[batch_idx : batch_idx + _BATCH_SIZE]
-
-            if batch_idx > 0:
-                await asyncio.sleep(_BATCH_DELAY)
-
-            current_batch_num = batch_idx // _BATCH_SIZE + 1
-            if show_progress:
-                logger.info(f"Embedding batch {current_batch_num}/{num_batches}")
-
-            batch_embeddings = await self._call_hf_api(batch)
-            new_embeddings.extend(batch_embeddings)
+        for result in batch_results:
+            new_embeddings.extend(result)
 
         # Store results and cache
         if settings.enable_caching:
