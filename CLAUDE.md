@@ -66,6 +66,79 @@
 - Output directory: `dist`
 - Env vars: `VITE_API_BASE_URL` and `VITE_WS_URL` set in Vercel dashboard
 
+## Services Needed to Keep the Project Live
+
+Everything is cloud-hosted. No local infrastructure required. All services have free tiers.
+
+### 1. Railway — Backend Hosting
+- URL: https://railway.app
+- What it runs: FastAPI backend (Dockerfile)
+- Repo connected: `arshadvani3/devdocs-ai`, root directory `backend/`
+- Live URL: `https://web-production-26ffd.up.railway.app`
+- **If it goes down:** redeploy from Railway dashboard → Deployments → Redeploy
+
+### 2. Vercel — Frontend Hosting
+- URL: https://vercel.com
+- What it runs: React 19 + TypeScript static build
+- Repo connected: same GitHub repo, `frontend/` directory
+- Live URL: `https://devdocs-ai-beryl.vercel.app`
+- **If it goes down:** auto-redeploys on every push to main
+
+### 3. Groq — LLM Inference
+- URL: https://console.groq.com
+- What it does: runs `llama-3.3-70b-versatile`, streams tokens to backend
+- Key name in Railway env vars: `GROQ_API_KEY`
+- Free tier: generous daily token limit, no credit card needed
+
+### 4. HuggingFace — Embeddings
+- URL: https://huggingface.co/settings/tokens
+- What it does: converts text chunks to 384-dim vectors via Inference API
+- Model: `sentence-transformers/all-MiniLM-L6-v2`
+- Key name in Railway env vars: `HF_API_KEY`
+- Free tier: rate limited (handled by retry logic in embeddings.py)
+
+### 5. Qdrant Cloud — Vector Database
+- URL: https://cloud.qdrant.io
+- What it does: stores and searches all code chunk embeddings
+- Key names in Railway env vars: `QDRANT_URL`, `QDRANT_API_KEY`
+- Free tier: 1 cluster, 1GB storage
+- **Note:** each indexed GitHub repo creates its own collection here
+
+### 6. Upstash — Redis Cache
+- URL: https://console.upstash.com
+- What it does: caches embeddings (24h) and query responses (1h)
+- Key names in Railway env vars: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`
+- Free tier: 10,000 requests/day
+- **Note:** system works fine without it (graceful degradation)
+
+---
+
+### All Railway Environment Variables (Backend)
+
+```
+GROQ_API_KEY
+GROQ_MODEL=llama-3.3-70b-versatile
+HF_API_KEY
+EMBEDDING_MODEL=all-MiniLM-L6-v2
+QDRANT_URL
+QDRANT_API_KEY
+QDRANT_COLLECTION_NAME=devdocs
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+ENABLE_CACHING=true
+ENABLE_SMART_CHUNKING=true
+CORS_ORIGINS=https://devdocs-ai-beryl.vercel.app
+```
+
+### All Vercel Environment Variables (Frontend)
+
+```
+VITE_API_BASE_URL=https://web-production-26ffd.up.railway.app/api/v1
+VITE_WS_URL=wss://web-production-26ffd.up.railway.app/api/v1/stream
+```
+
+---
+
 ## Common Issues & Fixes
 
 | Issue | Fix |
